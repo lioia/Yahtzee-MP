@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Yahtzee</string>
+    <string name="play">Play</string>
+    <string name="previous_games">Previous Games</string>
 </resources>
