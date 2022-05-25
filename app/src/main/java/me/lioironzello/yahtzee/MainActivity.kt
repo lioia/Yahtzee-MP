@@ -6,20 +6,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import me.lioironzello.yahtzee.ui.model.SettingsModel
 import me.lioironzello.yahtzee.ui.screen.MainLayout
-import me.lioironzello.yahtzee.ui.theme.Background
-import me.lioironzello.yahtzee.ui.theme.Dice
-import me.lioironzello.yahtzee.ui.theme.TypeSize
-import me.lioironzello.yahtzee.ui.theme.YahtzeeTheme
+import me.lioironzello.yahtzee.ui.theme.*
 import java.util.*
 
+@ExperimentalMaterialApi
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -34,20 +32,15 @@ class MainActivity : ComponentActivity() {
             // Setting the application language
             resources.configuration.setLocale(Locale(language))
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
-            val textSize = when (sharedPreferences.getString("textSize", "Medium")) {
-                "Small" -> TypeSize.Small
-                "Large" -> TypeSize.Large
-                else -> TypeSize.Medium
-            }
             val backgroundColor = Background.values()[sharedPreferences.getInt("background", 0)]
             val dice = Dice.values()[sharedPreferences.getInt("dice", 0)]
             val diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 1)]
 
-            val settings by remember {
+            val settings = rememberSaveable {
                 mutableStateOf(
                     SettingsModel(
+                        language,
                         darkTheme,
-                        textSize,
                         backgroundColor,
                         dice,
                         diceVelocity
@@ -55,13 +48,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            YahtzeeTheme(settings.darkTheme) {
+            YahtzeeTheme(settings.value.darkTheme) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    MainLayout()
+                    MainLayout(settings)
                 }
             }
         }

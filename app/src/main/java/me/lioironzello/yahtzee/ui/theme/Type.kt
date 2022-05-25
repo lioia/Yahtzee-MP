@@ -6,76 +6,23 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// TODO(test sizes)
-
 // Set of Material typography styles to start with
-val SmallTypography = Typography(
-    // Used for all texts
+val Typography = Typography(
     body1 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp
-    ),
-    // Used for logo and special strings
-    h1 = TextStyle(
-        fontFamily = FontFamily.Cursive,
-        fontWeight = FontWeight.Bold,
-        fontSize = 96.sp
-    ),
+    )
+    /* Other default text styles to override
     button = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
         fontSize = 14.sp
     ),
-)
-
-
-val MediumTypography = Typography(
-    // Used for all texts
-    body1 = TextStyle(
+    caption = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 24.sp
-    ),
-    // Used for logo and special strings
-    h1 = TextStyle(
-        fontFamily = FontFamily.Cursive,
-        fontWeight = FontWeight.Bold,
-        fontSize = 96.sp
-    ),
-    button = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
-        fontSize = 21.sp
-    ),
-)
-
-val LargeTypography = Typography(
-    // Used for all texts
-    body1 = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 48.sp
-    ),
-    // Used for logo and special strings
-    h1 = TextStyle(
-        fontFamily = FontFamily.Cursive,
-        fontWeight = FontWeight.Bold,
-        fontSize = 96.sp
-    ),
-    button = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
-        fontSize = 42.sp
-    ),
-)
-
-enum class TypeSize { Small, Medium, Large }
-
-object Type {
-    val TypeSizes = mapOf(
-        TypeSize.Small to SmallTypography,
-        TypeSize.Medium to MediumTypography,
-        TypeSize.Large to LargeTypography
+        fontSize = 12.sp
     )
-}
+    */
+)

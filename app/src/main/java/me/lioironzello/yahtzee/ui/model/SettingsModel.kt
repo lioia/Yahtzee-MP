@@ -5,13 +5,12 @@ import kotlinx.parcelize.Parcelize
 import me.lioironzello.yahtzee.DiceVelocity
 import me.lioironzello.yahtzee.ui.theme.Background
 import me.lioironzello.yahtzee.ui.theme.Dice
-import me.lioironzello.yahtzee.ui.theme.TypeSize
 
 @Parcelize
-data class SettingsModel(
-    val darkTheme: Boolean,
-    val textSize: TypeSize,
+class SettingsModel(
+    var language: String,
+    var darkTheme: Boolean,
     val background: Background,
     val dice: Dice,
-    val diceVelocity: DiceVelocity
+    var diceVelocity: DiceVelocity
 ) : Parcelable

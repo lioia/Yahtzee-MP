@@ -3,4 +3,9 @@
     <string name="app_name">Yahtzee</string>
     <string name="play">Gioca</string>
     <string name="previous_games">Storico Partite</string>
+    <string name="settings">Impostazioni</string>
+    <string name="language">Lingua</string>
+    <string name="dark_theme">Tema Scuro</string>
+    <string name="text_size">Grandezza Scritte</string>
+    <string name="roll_velocity">Velocità Lancio</string>
 </resources>
