@@ -1,6 +1,8 @@
 package me.lioironzello.yahtzee
 
+import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.ConfigurationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +25,16 @@ import java.util.*
 @ExperimentalMaterialApi
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Getting OpenGL ES Version
+        // From https://android.googlesource.com/platform/cts/+/73e3f96/tests/tests/graphics/src/android/opengl/cts/OpenGlEsVersionTest.java
+        val activityManager =
+            applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val configurationInfo = activityManager.deviceConfigurationInfo
+        val glVersion =
+            if (configurationInfo.reqGlEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
+                (configurationInfo.reqGlEsVersion and 0xffff0000.toInt()) shr 16
+            } else 1
+
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
         // Getting settings from SharedPreferences
         val defaultLanguage =
@@ -34,7 +46,8 @@ class MainActivity : ComponentActivity() {
         resources.configuration.setLocale(Locale(language))
         val backgroundColor = Background.values()[sharedPreferences.getInt("background", 0)]
         val dice = Dice.values()[sharedPreferences.getInt("dice", 0)]
-        val diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 1)]
+        var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
+        if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
 
         super.onCreate(savedInstanceState)
         setContent {
@@ -45,6 +58,7 @@ class MainActivity : ComponentActivity() {
             settings.background = backgroundColor
             settings.dice = dice
             settings.diceVelocity = diceVelocity
+            settings.glVersion = glVersion
 
             YahtzeeTheme(settings.darkTheme) {
                 // A surface container using the 'background' color from the theme
@@ -60,4 +74,4 @@ class MainActivity : ComponentActivity() {
 }
 
 // TODO(add faster velocity, move to Dice model class)
-enum class DiceVelocity { Medium, Fast }
+enum class DiceVelocity { Slow, Medium, Fast }

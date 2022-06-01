@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,7 +25,7 @@ fun MainLayout(settingsModel: SettingsModel) {
         Screens.Settings -> SettingsLayout(settingsModel)
         Screens.PreviousGames -> TODO()
         Screens.Tutorial -> TODO()
-        Screens.Play -> TODO()
+        Screens.Play -> PlayLayout(settingsModel)
     }
 }
 
@@ -55,7 +54,7 @@ fun Home() {
         )
         Spacer(modifier = Modifier.height(128.dp))
         Button(
-            onClick = { /*TODO*/ }, modifier = Modifier
+            onClick = { ScreenRouter.navigateTo(Screens.Play) }, modifier = Modifier
                 .width(192.dp)
                 .height(64.dp), elevation = ButtonDefaults.elevation(8.dp)
         ) {

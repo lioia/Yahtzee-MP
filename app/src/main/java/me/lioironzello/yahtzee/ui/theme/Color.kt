@@ -12,4 +12,8 @@ val Teal200 = Color(0xFF03DAC5)
 enum class Background { White, Black, Blue, Green, Wood }
 
 // Background Color
-enum class Dice { White, Blue, Green, Red, Wood }
+enum class Dice(val color: Color) {
+    White(Color.White), Blue(Color.Blue), Green(Color.Green), Red(
+        Color.Red
+    )
+}

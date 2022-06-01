@@ -49,4 +49,7 @@ class SettingsModel : Parcelable {
         set(value) {
             _diceVelocity.value = value
         }
+
+    @IgnoredOnParcel
+    var glVersion: Int = 1
 }

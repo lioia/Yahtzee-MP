@@ -2,10 +2,7 @@ package me.lioironzello.yahtzee.ui.screen
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -26,6 +23,7 @@ import me.lioironzello.yahtzee.DiceVelocity
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.ui.model.SettingsModel
 import me.lioironzello.yahtzee.ui.theme.Background
+import me.lioironzello.yahtzee.ui.theme.Dice
 import kotlin.math.absoluteValue
 
 @ExperimentalPagerApi
@@ -36,6 +34,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
 
     val languages = mapOf("en" to "English", "it" to "Italiano")
     var languageExpanded by remember { mutableStateOf(false) }
+    var velocityExpanded by remember { mutableStateOf(false) }
 
     val language = rememberSaveable { mutableStateOf(settingsModel.language) }
     val darkTheme = rememberSaveable { mutableStateOf(settingsModel.darkTheme) }
@@ -125,15 +124,10 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                     }
             ) {
                 val bg = Background.values()[page]
-                val border = if (bg == background.value) 6.dp else 0.dp
+                val borderColor = if (bg == background.value) Color(255, 244, 56) else Color.Black
                 Box(
                     modifier = Modifier
-                        .border(
-                            BorderStroke(
-                                border,
-                                Color(255, 244, 56)
-                            )
-                        )
+                        .border(6.dp, borderColor)
                         .clickable { background.value = bg }
                 ) {
                     when (bg) {
@@ -162,70 +156,46 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             }
         }
         // Dice Color
-        Text(stringResource(R.string.background_style), style = MaterialTheme.typography.body1)
-        // TODO(dice color)
-//        HorizontalPager(count = Background.values().size, modifier = Modifier.padding(8.dp)) { page ->
-//            Card(
-//                Modifier
-//                    .graphicsLayer {
-//                        // Calculate the absolute offset for the current page from the
-//                        // scroll position. We use the absolute value which allows us to mirror
-//                        // any effects for both directions
-//                        val pageOffset = calculateCurrentOffsetForPage(page).absoluteValue
-//
-//                        // We animate the scaleX + scaleY, between 85% and 100%
-//                        lerp(
-//                            start = 0.85f,
-//                            stop = 1f,
-//                            fraction = 1f - pageOffset.coerceIn(0f, 1f)
-//                        ).also { scale ->
-//                            scaleX = scale
-//                            scaleY = scale
-//                        }
-//
-//                        // We animate the alpha, between 50% and 100%
-//                        alpha = lerp(
-//                            start = 0.5f,
-//                            stop = 1f,
-//                            fraction = 1f - pageOffset.coerceIn(0f, 1f)
-//                        )
-//                    }
-//            ) {
-//                val bg = Background.values()[page]
-//                val border = if (bg == background.value) 6.dp else 0.dp
-//                Box(
-//                    modifier = Modifier.border(
-//                        BorderStroke(
-//                            border,
-//                            Color(255, 244, 56)
-//                        )
-//                    ).clickable { background.value = bg }
-//                ) {
-//                    when (bg) {
-//                        Background.White -> Image(
-//                            painter = painterResource(R.drawable.green),
-//                            contentDescription = "Green"
-//                        )
-//                        Background.Black -> Image(
-//                            painter = painterResource(R.drawable.green),
-//                            contentDescription = "Green"
-//                        )
-//                        Background.Blue -> Image(
-//                            painter = painterResource(R.drawable.green),
-//                            contentDescription = "Green"
-//                        )
-//                        Background.Green -> Image(
-//                            painter = painterResource(R.drawable.green),
-//                            contentDescription = "Green"
-//                        )
-//                        Background.Wood -> Image(
-//                            painter = painterResource(R.drawable.green),
-//                            contentDescription = "Green"
-//                        )
-//                    }
-//                }
-//            }
-//        }
+        Text(stringResource(R.string.dice_color), style = MaterialTheme.typography.body1)
+        HorizontalPager(count = Dice.values().size, modifier = Modifier.padding(8.dp)) { page ->
+            Card(
+                Modifier
+                    .graphicsLayer {
+                        // Calculate the absolute offset for the current page from the
+                        // scroll position. We use the absolute value which allows us to mirror
+                        // any effects for both directions
+                        val pageOffset = calculateCurrentOffsetForPage(page).absoluteValue
+
+                        // We animate the scaleX + scaleY, between 85% and 100%
+                        lerp(
+                            start = 0.85f,
+                            stop = 1f,
+                            fraction = 1f - pageOffset.coerceIn(0f, 1f)
+                        ).also { scale ->
+                            scaleX = scale
+                            scaleY = scale
+                        }
+
+                        // We animate the alpha, between 50% and 100%
+                        alpha = lerp(
+                            start = 0.5f,
+                            stop = 1f,
+                            fraction = 1f - pageOffset.coerceIn(0f, 1f)
+                        )
+                    }
+            ) {
+                val diceColor = Dice.values()[page]
+//                val border = if (diceColor == dice.value) 6.dp else 0.dp
+                val borderColor = if (diceColor == dice.value) Color(255, 244, 56) else Color.Black
+                Box(
+                    modifier = Modifier
+                        .border(BorderStroke(6.dp, borderColor))
+                        .size(80.dp)
+                        .background(diceColor.color)
+                        .clickable { dice.value = diceColor }
+                )
+            }
+        }
         // Dice Velocity
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -233,12 +203,32 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(stringResource(R.string.roll_velocity), style = MaterialTheme.typography.body1)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DiceVelocity.values().forEach {
-                    RadioButton(
-                        selected = diceVelocity.value == it,
-                        onClick = { diceVelocity.value = it })
-                    Text(it.name)
+            ExposedDropdownMenuBox(
+                expanded = velocityExpanded,
+                onExpandedChange = { velocityExpanded = !velocityExpanded }) {
+                OutlinedTextField(
+                    modifier = Modifier.width(192.dp),
+                    value = diceVelocity.value.name,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = velocityExpanded) },
+                )
+                ExposedDropdownMenu(
+                    expanded = velocityExpanded,
+                    onDismissRequest = { velocityExpanded = false }) {
+                    if (settingsModel.glVersion == 3)
+                        DropdownMenuItem(onClick = {
+                            diceVelocity.value = DiceVelocity.Slow
+                            velocityExpanded = false
+                        }) { Text(stringResource(R.string.slow)) }
+                    DropdownMenuItem(onClick = {
+                        diceVelocity.value = DiceVelocity.Medium
+                        velocityExpanded = false
+                    }) { Text(stringResource(R.string.medium)) }
+                    DropdownMenuItem(onClick = {
+                        diceVelocity.value = DiceVelocity.Fast
+                        velocityExpanded = false
+                    }) { Text(stringResource(R.string.fast)) }
                 }
             }
         }
