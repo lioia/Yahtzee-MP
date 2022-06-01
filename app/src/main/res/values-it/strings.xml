@@ -15,4 +15,6 @@
     <string name="medium">Medio</string>
     <string name="fast">Veloce</string>
     <string name="loading">Caricamento</string>
+    <string name="close">Chiudi</string>
+    <string name="select_num_players">Seleziona il numero di giocatori:</string>
 </resources>

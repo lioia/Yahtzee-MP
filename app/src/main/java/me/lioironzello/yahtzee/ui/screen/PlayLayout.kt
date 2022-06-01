@@ -9,18 +9,25 @@ import androidx.compose.animation.core.animateOffset
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
@@ -38,7 +45,7 @@ import me.lioironzello.yahtzee.ui.model.SettingsModel
 import kotlin.random.Random
 
 @Composable
-fun PlayLayout(settingsModel: SettingsModel) {
+fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
     var referenceModel by remember { mutableStateOf<RenderableInstance?>(null) }
     var faces = listOf<Bitmap>()
 
@@ -132,7 +139,7 @@ fun PlayLayout(settingsModel: SettingsModel) {
 
     if (settingsModel.diceVelocity == DiceVelocity.Slow) {
         if (referenceModel != null)
-            Play(settingsModel, referenceModel, faces)
+            Play(settingsModel, numberOfPlayers, referenceModel, faces)
         else {
             Column(
                 Modifier.fillMaxSize(),
@@ -143,12 +150,19 @@ fun PlayLayout(settingsModel: SettingsModel) {
             }
         }
     } else {
-        Play(settingsModel, null, faces)
+        Play(settingsModel, numberOfPlayers, null, faces)
     }
 }
 
 @Composable
-fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, faces: List<Bitmap>) {
+fun Play(
+    settingsModel: SettingsModel,
+    numberOfPlayers: Int,
+    referenceModel: RenderableInstance?,
+    faces: List<Bitmap>
+) {
+    val context = LocalContext.current
+
     val is3D = settingsModel.diceVelocity == DiceVelocity.Slow
     val dices = remember {
         mutableStateListOf(
@@ -163,72 +177,115 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
     var currentRound by remember { mutableStateOf(0) }
     var currentRoll by remember { mutableStateOf(0) }
     var currentPlayer by remember { mutableStateOf(0) }
-    val players = remember { mutableStateListOf<Player>() }
+    val players = if (numberOfPlayers == 1) {
+        remember { mutableStateListOf(Player()) }
+    } else {
+        remember { mutableStateListOf(Player(), Player()) }
+    }
     var animate by remember { mutableStateOf(false) }
     val transition = updateTransition(targetState = animate, label = "Cube")
+    var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
 
     Column(
         Modifier.fillMaxSize()
     ) {
-        ScoreBoard(dices, players, currentPlayer)
-        // Dices
+        ScoreBoard(
+            dices.map { it.number + 1 },
+            players,
+            currentPlayer,
+            currentRoll
+        ) { score, value ->
+            selectedScore = Pair(score, value)
+        }
+        // Score
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            players.forEachIndexed { index, player ->
+                val bonus = if (player.bonusReached) 35 else 0
+                Text(
+                    "Player ${index + 1} Score: ${player.scores.values.sum() + bonus}",
+                    fontWeight = if (index == currentPlayer) FontWeight.Bold else FontWeight.Medium,
+                    style = MaterialTheme.typography.h6
+                )
+            }
+        }
+        // Dices
+        Row(
+            Modifier
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             dices.forEach {
-                when (settingsModel.diceVelocity) {
-                    DiceVelocity.Slow -> {
-                        val rotation by transition.animateOffset(
-                            label = "Cube",
-                            transitionSpec = { tween(durationMillis = 1000) }) { state ->
-                            if (state) Offset(
-                                it.kx * 90f,
-                                it.ky * 90f
-                            ) else Offset(it.modelNode.rotation.x, it.modelNode.rotation.y)
-                        }
-                        it.modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
-
-                        AndroidView(modifier = Modifier.size(80.dp), factory = { context ->
-                            SceneView(context).apply {
-                                mainLight = null
-                                // TODO(background image)
-                                backgroundColor = colorOf(255f, 255f, 255f)
-                                addChild(it.modelNode)
-                                gestureDetector.moveGestureDetector = null
-                                gestureDetector.rotateGestureDetector = null
-                                gestureDetector.scaleGestureDetector = null
-                                gestureDetector.cameraManipulator = null
-                            }
-                        })
-                    }
-                    else -> {
-                        val value = if (settingsModel.diceVelocity == DiceVelocity.Medium) {
-                            transition.animateInt(
+                Column {
+                    when (settingsModel.diceVelocity) {
+                        DiceVelocity.Slow -> {
+                            val rotation by transition.animateOffset(
                                 label = "Cube",
-                                transitionSpec = { tween(durationMillis = 500) }) { state ->
-                                if (state) it.randomValue else it.number
-                            }.value
-                        } else {
-                            it.randomValue
-                        }
+                                transitionSpec = { tween(durationMillis = 1000) }) { state ->
+                                if (state) Offset(
+                                    it.kx * 90f,
+                                    it.ky * 90f
+                                ) else Offset(it.modelNode.rotation.x, it.modelNode.rotation.y)
+                            }
+                            it.modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
 
-                        Image(
-                            it.faces[value % 6].asImageBitmap(),
-                            modifier = Modifier.padding(2.dp),
-                            contentDescription = "Face"
-                        )
+                            AndroidView(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clickable {
+                                        Toast
+                                            .makeText(context, "Click", Toast.LENGTH_LONG)
+                                            .show()
+                                    },
+                                factory = { context ->
+                                    SceneView(context).apply {
+                                        mainLight = null
+                                        // TODO(background image)
+                                        backgroundColor = colorOf(255f, 255f, 255f)
+                                        addChild(it.modelNode)
+                                        gestureDetector.moveGestureDetector = null
+                                        gestureDetector.rotateGestureDetector = null
+                                        gestureDetector.scaleGestureDetector = null
+                                        gestureDetector.cameraManipulator = null
+                                    }
+                                }
+                            )
+                        }
+                        else -> {
+                            val value = if (settingsModel.diceVelocity == DiceVelocity.Medium) {
+                                transition.animateInt(
+                                    label = "Cube",
+                                    transitionSpec = { tween(durationMillis = 500) }) { state ->
+                                    if (state) it.randomValue else it.number
+                                }.value
+                            } else {
+                                it.randomValue
+                            }
+
+                            Image(
+                                it.faces[value % 6].asImageBitmap(),
+                                contentDescription = "Face",
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                    IconButton(onClick = { it.locked = !it.locked }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        Icon(if(it.locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen , contentDescription = "Lock")
                     }
                 }
             }
         }
+        // Buttons
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Button(onClick = {
                 currentRoll++
                 dices.forEach {
-                    val random = Random.nextInt(6, 36)
+                    if (it.locked) return@forEach
+                    val random = Random(System.nanoTime()).nextInt(6, 36)
                     it.number = random % 6
                     if (it.is3D) {
                         it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
@@ -244,14 +301,17 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
             }
             Button(onClick = {
                 currentRoll = 0
-                if (currentPlayer == players.size) {
+                players[currentPlayer].scores[selectedScore!!.first] = selectedScore!!.second
+                if (currentPlayer == players.size - 1) {
                     currentPlayer = 0
                     currentRound++
                 } else {
                     currentPlayer++
                 }
-            }, enabled = currentRoll > 0) {
-                Text("Next Round")
+                selectedScore = null
+                dices.forEach { it.locked = false }
+            }, enabled = selectedScore != null) {
+                Text("Save Score")
             }
         }
         // TODO(dialog game finished)
@@ -260,28 +320,89 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
 }
 
 @Composable
-fun ScoreBoard(dices: List<DiceModel>, players: List<Player>, currentPlayer: Int) {
-    Row(horizontalArrangement = Arrangement.SpaceEvenly) {
-        Column {
+fun ScoreBoard(
+    dices: List<Int>,
+    players: List<Player>,
+    currentPlayer: Int,
+    currentRoll: Int,
+    selectScore: (ScoreType, Int) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Column(Modifier.weight(1f, true)) {
+            Score(dices, players, currentPlayer, ScoreType.One, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Two, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Three, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Four, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Five, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Six, currentRoll, selectScore)
+            // TODO(bonus)
         }
-        Column {}
+        Column(Modifier.weight(1f, true)) {
+            Score(dices, players, currentPlayer, ScoreType.Tris, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Poker, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Full, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.SmallStraight, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.LargeStraight, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Yahtzee, currentRoll, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Chance, currentRoll, selectScore)
+        }
     }
 }
 
 @Composable
-fun Score(dices: List<DiceModel>, players: List<Player>, currentPlayer: Int, type: ScoreType) {
-    Row {
-        Text(type.name) // TODO(translate)
+fun Score(
+    dices: List<Int>,
+    players: List<Player>,
+    currentPlayer: Int,
+    type: ScoreType,
+    currentRoll: Int,
+    selectScore: (ScoreType, Int) -> Unit
+) {
+    Row(
+        Modifier
+            .height(64.dp)
+            .border(2.dp, Color.Black)
+            .padding(4.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            type.name, modifier = Modifier
+                .padding(4.dp)
+                .weight(2f, true),
+            textAlign = TextAlign.Center
+        ) // TODO(translate)
         players.forEachIndexed { index, player ->
-            var score = " "
+            var score = "0"
             val savedScore = player.scores[type]
+            var count = 0
             if (savedScore == null) {
-                if (currentPlayer == index) {
-                    val count = calculateScore(dices.map { dice -> dice.number }, type)
-                    score = count.toString()
+                if (currentRoll > 0) {
+                    if (currentPlayer == index) {
+                        count = calculateScore(dices, type)
+                        score = count.toString()
+                    }
                 }
             } else score = savedScore.toString()
-            Text(score)
+            Column(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .border(1.dp, Color.Black)
+                    .weight(1f, true)
+                    .fillMaxSize()
+                    .clickable {
+                        if (index == currentPlayer && savedScore == null && currentRoll > 0)
+                            selectScore(type, count)
+                    },
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(score)
+            }
         }
     }
 }
@@ -289,7 +410,7 @@ fun Score(dices: List<DiceModel>, players: List<Player>, currentPlayer: Int, typ
 enum class ScoreType { One, Two, Three, Four, Five, Six, Tris, Poker, Full, SmallStraight, LargeStraight, Chance, Yahtzee }
 
 class Player {
-    val scores = mapOf<ScoreType, Int>()
+    val scores = mutableMapOf<ScoreType, Int>()
     val bonusReached = false
 }
 
@@ -301,7 +422,7 @@ fun calculateScore(dices: List<Int>, type: ScoreType): Int {
         ScoreType.Four -> return dices.filter { dice -> dice == 4 }.size * 4
         ScoreType.Five -> return dices.filter { dice -> dice == 5 }.size * 5
         ScoreType.Six -> return dices.filter { dice -> dice == 6 }.size * 6
-        ScoreType.Tris -> return if (dices.distinct().size <= 3) dices.sum() else 0
+        ScoreType.Tris -> return if (dices.distinct().size <= 3) dices.sum() else 0 // TODO(wrong)
         ScoreType.Poker -> return if (dices.distinct().size <= 2) dices.sum() else 0
         ScoreType.Full -> {
             val first = dices.first()

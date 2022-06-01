@@ -56,6 +56,14 @@ class DiceModel(
             _number.value = value
         }
 
+    @IgnoredOnParcel
+    private var _locked = mutableStateOf(false)
+    var locked: Boolean
+        get() = _locked.value
+        set(value) {
+            _locked.value = value
+        }
+
     companion object {
         val Values3D = listOf(
             Pair(2, 3), // Face 1
