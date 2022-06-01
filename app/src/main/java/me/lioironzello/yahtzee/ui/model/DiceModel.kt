@@ -15,17 +15,9 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 class DiceModel(
     val is3D: Boolean,
-//    @IgnoredOnParcel
-//    val referenceNode: RenderableInstance? = null,
     @IgnoredOnParcel
     val faces: List<Bitmap> = listOf(),
 ) : Parcelable {
-//    init {
-//        if (referenceNode != null) {
-//            modelNode.setModel(referenceNode.renderable)
-//            modelNode.scaleModel(1.75f)
-//        }
-//    }
 
     fun setModel(referenceNode: RenderableInstance?, color: Color) {
         referenceNode?.let {
@@ -37,30 +29,12 @@ class DiceModel(
         }
     }
 
-//    @IgnoredOnParcel
-//    var is3D = false
-
     // Random values used for 3D animation
     @IgnoredOnParcel
     var kx = 0
 
     @IgnoredOnParcel
     var ky = 0
-//    @IgnoredOnParcel
-//    private var _kx = mutableStateOf(0)
-//    var kx: Int
-//        get() = _kx.value
-//        set(value) {
-//            _kx.value = value
-//        }
-//
-//    @IgnoredOnParcel
-//    private var _ky = mutableStateOf(0)
-//    var ky: Int
-//        get() = _ky.value
-//        set(value) {
-//            _ky.value = value
-//        }
 
     @IgnoredOnParcel
     private var _modelNode = mutableStateOf(ModelNode())
@@ -70,18 +44,9 @@ class DiceModel(
             _modelNode.value = value
         }
 
-//    @IgnoredOnParcel
-//    var faces = listOf<Bitmap>()
-
     // Random value used for 2D animation
     @IgnoredOnParcel
     var randomValue = 1
-//    private var _randomValue = mutableStateOf(1)
-//    var randomValue: Int
-//        get() = _randomValue.value
-//        set(value) {
-//            _randomValue.value = value
-//        }
 
     @IgnoredOnParcel
     private var _number = mutableStateOf(1)
@@ -90,4 +55,15 @@ class DiceModel(
         set(value) {
             _number.value = value
         }
+
+    companion object {
+        val Values3D = listOf(
+            Pair(2, 3), // Face 1
+            Pair(2, 2), // Face 2
+            Pair(1, 2), // Face 3
+            Pair(3, 2), // Face 4
+            Pair(2, 4), // Face 5
+            Pair(3, 1), // Face 6
+        )
+    }
 }

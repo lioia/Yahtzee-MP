@@ -2,6 +2,7 @@ package me.lioironzello.yahtzee.ui.screen
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateInt
 import androidx.compose.animation.core.animateOffset
@@ -12,12 +13,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +32,7 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import me.lioironzello.yahtzee.DiceVelocity
+import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.ui.model.DiceModel
 import me.lioironzello.yahtzee.ui.model.SettingsModel
 import kotlin.random.Random
@@ -129,7 +133,15 @@ fun PlayLayout(settingsModel: SettingsModel) {
     if (settingsModel.diceVelocity == DiceVelocity.Slow) {
         if (referenceModel != null)
             Play(settingsModel, referenceModel, faces)
-        else Text("Loading")
+        else {
+            Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(stringResource(R.string.loading))
+            }
+        }
     } else {
         Play(settingsModel, null, faces)
     }
@@ -171,7 +183,7 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
                     DiceVelocity.Slow -> {
                         val rotation by transition.animateOffset(
                             label = "Cube",
-                            transitionSpec = { tween(durationMillis = 500) }) { state ->
+                            transitionSpec = { tween(durationMillis = 1000) }) { state ->
                             if (state) Offset(
                                 it.kx * 90f,
                                 it.ky * 90f
@@ -193,10 +205,14 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
                         })
                     }
                     else -> {
-                        val value by transition.animateInt(
-                            label = "Cube",
-                            transitionSpec = { tween(durationMillis = 500) }) { state ->
-                            if (state) it.randomValue else it.number
+                        val value = if (settingsModel.diceVelocity == DiceVelocity.Medium) {
+                            transition.animateInt(
+                                label = "Cube",
+                                transitionSpec = { tween(durationMillis = 500) }) { state ->
+                                if (state) it.randomValue else it.number
+                            }.value
+                        } else {
+                            it.randomValue
                         }
 
                         Image(
@@ -212,11 +228,14 @@ fun Play(settingsModel: SettingsModel, referenceModel: RenderableInstance?, face
             Button(onClick = {
                 currentRoll++
                 dices.forEach {
+                    val random = Random.nextInt(6, 36)
+                    it.number = random % 6
                     if (it.is3D) {
-                        it.kx = Random.nextInt(0, 20)
-                        it.ky = Random.nextInt(0, 20)
+                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
+                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
+                        println("${it.number}, ${it.kx}, ${it.ky}")
                     } else {
-                        it.randomValue = Random.nextInt(0, 20)
+                        it.randomValue = random
                     }
                     animate = true
                 }
