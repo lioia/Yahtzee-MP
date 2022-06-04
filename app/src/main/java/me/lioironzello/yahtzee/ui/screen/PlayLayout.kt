@@ -9,11 +9,14 @@ import androidx.compose.animation.core.animateOffset
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.runtime.*
@@ -189,29 +192,30 @@ fun Play(
     Column(
         Modifier.fillMaxSize()
     ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            IconButton(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(Modifier.size(16.dp))
+            players.forEachIndexed { index, player ->
+                Text(
+                    "Player ${index + 1}: ${player.scores.values.sum()}",
+                    modifier = Modifier
+                        .weight(1f, true)
+                        .align(Alignment.CenterVertically),
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = if (currentPlayer == index) FontWeight.Bold else FontWeight.Light
+                )
+            }
+        }
         ScoreBoard(
             dices.map { it.number + 1 },
             players,
             currentPlayer,
-            currentRoll
+            currentRoll,
+            selectedScore?.first
         ) { score, value ->
             selectedScore = Pair(score, value)
-        }
-        // Score
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            players.forEachIndexed { index, player ->
-                val bonus = if (player.bonusReached) 35 else 0
-                Text(
-                    "Player ${index + 1} Score: ${player.scores.values.sum() + bonus}",
-                    fontWeight = if (index == currentPlayer) FontWeight.Bold else FontWeight.Medium,
-                    style = MaterialTheme.typography.h6
-                )
-            }
         }
         // Dices
         Row(
@@ -273,8 +277,17 @@ fun Play(
                             )
                         }
                     }
-                    IconButton(onClick = { it.locked = !it.locked }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                        Icon(if(it.locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen , contentDescription = "Lock")
+                    IconButton(
+                        onClick = {
+                            if (currentRoll > 0)
+                                it.locked = !it.locked
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Icon(
+                            if (it.locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                            contentDescription = "Lock"
+                        )
                     }
                 }
             }
@@ -302,6 +315,7 @@ fun Play(
             Button(onClick = {
                 currentRoll = 0
                 players[currentPlayer].scores[selectedScore!!.first] = selectedScore!!.second
+                calculateBonus(players[currentPlayer])
                 if (currentPlayer == players.size - 1) {
                     currentPlayer = 0
                     currentRound++
@@ -310,11 +324,34 @@ fun Play(
                 }
                 selectedScore = null
                 dices.forEach { it.locked = false }
+
             }, enabled = selectedScore != null) {
                 Text("Save Score")
             }
         }
-        // TODO(dialog game finished)
+        if (currentRound == 13) {
+            AlertDialog(onDismissRequest = {},
+                title = { Text("Game Finished") },
+                text = {
+                    if (numberOfPlayers == 1)
+                        Text("You scored: ${players.first().scores.values.sum()} points")
+                    else {
+                        val scores = mutableListOf<Int>()
+                        var winningScore = 0
+                        players.forEachIndexed { index, player ->
+                            val score = player.scores.values.sum()
+                            scores.add(score)
+                            if (score > winningScore) winningScore = score
+                            Text("Player ${index + 1} scored ${player.scores.values.sum()}")
+                        }
+                        if (scores.distinct().size == 1) Text("Draw")
+                        else Text("Player ${scores.indexOf(winningScore) + 1} won with $winningScore points")
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {}
+            )
+        }
         BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }
@@ -325,6 +362,7 @@ fun ScoreBoard(
     players: List<Player>,
     currentPlayer: Int,
     currentRoll: Int,
+    selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
     Row(
@@ -333,22 +371,85 @@ fun ScoreBoard(
             .padding(8.dp)
     ) {
         Column(Modifier.weight(1f, true)) {
-            Score(dices, players, currentPlayer, ScoreType.One, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Two, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Three, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Four, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Five, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Six, currentRoll, selectScore)
-            // TODO(bonus)
+            ScoreHeader(players.size - 1)
+            Score(dices, players, currentPlayer, ScoreType.One, currentRoll, selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Two, currentRoll ,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Three, currentRoll, selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Four, currentRoll ,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Five, currentRoll ,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Six, currentRoll, selectedScoreType, selectScore)
+            BonusScore(players)
         }
         Column(Modifier.weight(1f, true)) {
-            Score(dices, players, currentPlayer, ScoreType.Tris, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Poker, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Full, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.SmallStraight, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.LargeStraight, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Yahtzee, currentRoll, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Chance, currentRoll, selectScore)
+            ScoreHeader(players.size - 1)
+            Score(dices, players, currentPlayer, ScoreType.Tris, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Poker, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Full, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.SmallStraight, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.LargeStraight, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Yahtzee, currentRoll,selectedScoreType, selectScore)
+            Score(dices, players, currentPlayer, ScoreType.Chance, currentRoll,selectedScoreType, selectScore)
+        }
+    }
+}
+
+@Composable
+fun ScoreHeader(numberOfPlayers: Int) {
+    Row(
+        Modifier
+            .padding(4.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "Type", modifier = Modifier
+                .padding(4.dp)
+                .weight(2f, true),
+            textAlign = TextAlign.Center
+        ) // TODO(translate)
+        for (i in 0..numberOfPlayers) {
+            Column(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .weight(1f, true),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("#${i + 1}")
+            }
+        }
+    }
+}
+
+@Composable
+fun BonusScore(players: List<Player>) {
+    Row(
+        Modifier
+            .height(56.dp)
+            .border(2.dp, Color.Black)
+            .padding(4.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "Bonus", modifier = Modifier
+                .padding(4.dp)
+                .weight(2f, true),
+            textAlign = TextAlign.Center
+        ) // TODO(translate)
+        players.forEach { player ->
+            Column(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .weight(1f, true)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (player.bonusReached)
+                    Icon(Icons.Outlined.Check, contentDescription = "Check")
+                else Text("${player.lastSixScore}/63")
+            }
         }
     }
 }
@@ -360,11 +461,12 @@ fun Score(
     currentPlayer: Int,
     type: ScoreType,
     currentRoll: Int,
+    selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
     Row(
         Modifier
-            .height(64.dp)
+            .height(56.dp)
             .border(2.dp, Color.Black)
             .padding(4.dp)
             .fillMaxWidth(),
@@ -388,10 +490,12 @@ fun Score(
                     }
                 }
             } else score = savedScore.toString()
+            val color = if (savedScore != null) Color.LightGray else Color.White
             Column(
                 modifier = Modifier
                     .padding(6.dp)
-                    .border(1.dp, Color.Black)
+                    .border(3.dp, if (selectedScoreType == type && index == currentPlayer) Color.Blue else Color.Black)
+                    .background(color)
                     .weight(1f, true)
                     .fillMaxSize()
                     .clickable {
@@ -411,7 +515,15 @@ enum class ScoreType { One, Two, Three, Four, Five, Six, Tris, Poker, Full, Smal
 
 class Player {
     val scores = mutableMapOf<ScoreType, Int>()
-    val bonusReached = false
+    var bonusReached = false
+    var lastSixScore = 0
+}
+
+fun calculateBonus(player: Player) {
+    if (player.bonusReached) return
+    val lastSix = player.scores.values.toList().takeLast(6)
+    player.bonusReached = lastSix.sum() >= 63
+    player.lastSixScore = lastSix.sum()
 }
 
 fun calculateScore(dices: List<Int>, type: ScoreType): Int {
@@ -422,8 +534,22 @@ fun calculateScore(dices: List<Int>, type: ScoreType): Int {
         ScoreType.Four -> return dices.filter { dice -> dice == 4 }.size * 4
         ScoreType.Five -> return dices.filter { dice -> dice == 5 }.size * 5
         ScoreType.Six -> return dices.filter { dice -> dice == 6 }.size * 6
-        ScoreType.Tris -> return if (dices.distinct().size <= 3) dices.sum() else 0 // TODO(wrong)
-        ScoreType.Poker -> return if (dices.distinct().size <= 2) dices.sum() else 0
+        ScoreType.Tris -> {
+            if (dices.distinct().size > 3) return 0
+            dices.distinct().forEach { value ->
+                val subList = dices.filter { it == value }
+                if (subList.size >= 3) return dices.sum()
+            }
+            return 0
+        }
+        ScoreType.Poker -> {
+            if (dices.distinct().size > 2) return 0
+            dices.distinct().forEach { value ->
+                val subList = dices.filter { it == value }
+                if (subList.size >= 4) return dices.sum()
+            }
+            return 0
+        }
         ScoreType.Full -> {
             val first = dices.first()
             val subList1 = dices.filter { dice -> dice == first }
