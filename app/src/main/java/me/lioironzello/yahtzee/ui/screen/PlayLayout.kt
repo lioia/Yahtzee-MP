@@ -26,8 +26,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,10 +43,10 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
-import me.lioironzello.yahtzee.DiceVelocity
 import me.lioironzello.yahtzee.R
-import me.lioironzello.yahtzee.ui.model.DiceModel
-import me.lioironzello.yahtzee.ui.model.SettingsModel
+import me.lioironzello.yahtzee.model.DiceModel
+import me.lioironzello.yahtzee.model.DiceVelocity
+import me.lioironzello.yahtzee.model.SettingsModel
 import kotlin.random.Random
 
 @Composable
@@ -68,13 +70,16 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
                 )
                 referenceModel?.let {
                     it.getMaterial("background")?.filamentMaterialInstance?.setBaseColor(
-                        colorOf(settingsModel.dice.color.toArgb())
+                        colorOf(
+                            settingsModel.diceColor.color.red,
+                            settingsModel.diceColor.color.green,
+                            settingsModel.diceColor.color.blue
+                        )
                     )
                 }
             }
 
         }
-
     } else {
         val density = context.resources.displayMetrics.density
         val size = 64 * density
@@ -93,7 +98,7 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
         }
         faces.forEachIndexed { index, bitmap ->
             val canvas = Canvas(bitmap)
-            canvas.drawColor(settingsModel.dice.color.toArgb())
+            canvas.drawColor(settingsModel.diceColor.color.toArgb())
             canvas.drawLine(0f, 0f, 0f, size, paint)
             canvas.drawLine(0f, 0f, size, 0f, paint)
             canvas.drawLine(size, 0f, size, size, paint)
@@ -169,11 +174,31 @@ fun Play(
     val is3D = settingsModel.diceVelocity == DiceVelocity.Slow
     val dices = remember {
         mutableStateListOf(
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.dice.color) },
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.dice.color) },
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.dice.color) },
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.dice.color) },
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.dice.color) }
+            DiceModel(is3D, faces).apply {
+                setModel(
+                    referenceModel,
+                    settingsModel.diceColor.color
+                )
+            },
+            DiceModel(is3D, faces).apply {
+                setModel(
+                    referenceModel,
+                    settingsModel.diceColor.color
+                )
+            },
+            DiceModel(is3D, faces).apply {
+                setModel(
+                    referenceModel,
+                    settingsModel.diceColor.color
+                )
+            },
+            DiceModel(is3D, faces).apply {
+                setModel(
+                    referenceModel,
+                    settingsModel.diceColor.color
+                )
+            },
+            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.diceColor.color) }
         )
     }
 
@@ -189,6 +214,18 @@ fun Play(
     val transition = updateTransition(targetState = animate, label = "Cube")
     var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
 
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colors.background)
+    ) {
+        Image(
+            painter = painterResource(if (settingsModel.darkTheme) R.drawable.black else R.drawable.white),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+    }
     Column(
         Modifier.fillMaxSize()
     ) {
@@ -236,6 +273,7 @@ fun Play(
                                 ) else Offset(it.modelNode.rotation.x, it.modelNode.rotation.y)
                             }
                             it.modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
+                            val bgColor = MaterialTheme.colors.background
 
                             AndroidView(
                                 modifier = Modifier
@@ -248,8 +286,8 @@ fun Play(
                                 factory = { context ->
                                     SceneView(context).apply {
                                         mainLight = null
-                                        // TODO(background image)
-                                        backgroundColor = colorOf(255f, 255f, 255f)
+                                        backgroundColor =
+                                            colorOf(bgColor.red, bgColor.green, bgColor.blue)
                                         addChild(it.modelNode)
                                         gestureDetector.moveGestureDetector = null
                                         gestureDetector.rotateGestureDetector = null
@@ -278,15 +316,13 @@ fun Play(
                         }
                     }
                     IconButton(
-                        onClick = {
-                            if (currentRoll > 0)
-                                it.locked = !it.locked
-                        },
+                        onClick = { if (currentRoll > 0) it.locked = !it.locked },
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Icon(
                             if (it.locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
-                            contentDescription = "Lock"
+                            contentDescription = "Lock",
+                            tint = if (it.locked) Color(0xFFFFA000) else MaterialTheme.colors.onBackground
                         )
                     }
                 }
@@ -372,23 +408,127 @@ fun ScoreBoard(
     ) {
         Column(Modifier.weight(1f, true)) {
             ScoreHeader(players.size - 1)
-            Score(dices, players, currentPlayer, ScoreType.One, currentRoll, selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Two, currentRoll ,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Three, currentRoll, selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Four, currentRoll ,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Five, currentRoll ,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Six, currentRoll, selectedScoreType, selectScore)
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.One,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Two,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Three,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Four,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Five,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Six,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
             BonusScore(players)
         }
         Column(Modifier.weight(1f, true)) {
             ScoreHeader(players.size - 1)
-            Score(dices, players, currentPlayer, ScoreType.Tris, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Poker, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Full, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.SmallStraight, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.LargeStraight, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Yahtzee, currentRoll,selectedScoreType, selectScore)
-            Score(dices, players, currentPlayer, ScoreType.Chance, currentRoll,selectedScoreType, selectScore)
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Tris,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Poker,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Full,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.SmallStraight,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.LargeStraight,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Yahtzee,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
+            Score(
+                dices,
+                players,
+                currentPlayer,
+                ScoreType.Chance,
+                currentRoll,
+                selectedScoreType,
+                selectScore
+            )
         }
     }
 }
@@ -426,7 +566,7 @@ fun BonusScore(players: List<Player>) {
     Row(
         Modifier
             .height(56.dp)
-            .border(2.dp, Color.Black)
+            .border(2.dp, MaterialTheme.colors.onBackground)
             .padding(4.dp)
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -467,7 +607,7 @@ fun Score(
     Row(
         Modifier
             .height(56.dp)
-            .border(2.dp, Color.Black)
+            .border(2.dp, MaterialTheme.colors.onBackground)
             .padding(4.dp)
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -490,11 +630,14 @@ fun Score(
                     }
                 }
             } else score = savedScore.toString()
-            val color = if (savedScore != null) Color.LightGray else Color.White
+            val color = if (savedScore != null) Color.Gray else MaterialTheme.colors.background
             Column(
                 modifier = Modifier
                     .padding(6.dp)
-                    .border(3.dp, if (selectedScoreType == type && index == currentPlayer) Color.Blue else Color.Black)
+                    .border(
+                        3.dp,
+                        if (selectedScoreType == type && index == currentPlayer) Color.Blue else MaterialTheme.colors.onBackground
+                    )
                     .background(color)
                     .weight(1f, true)
                     .fillMaxSize()
@@ -526,6 +669,7 @@ fun calculateBonus(player: Player) {
     player.lastSixScore = lastSix.sum()
 }
 
+// TODO(Se Yahtzee viene ripetuto può essere inserito solo in un'altra combinazione libera con il relativo punteggio.)
 fun calculateScore(dices: List<Int>, type: ScoreType): Int {
     when (type) {
         ScoreType.One -> return dices.filter { dice -> dice == 1 }.size

@@ -1,4 +1,4 @@
-package me.lioironzello.yahtzee.ui.model
+package me.lioironzello.yahtzee.model
 
 import android.graphics.Bitmap
 import android.os.Parcelable
@@ -11,6 +11,14 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+
+enum class DiceVelocity { Slow, Medium, Fast }
+enum class DiceColor(val color: Color) {
+    White(Color.White),
+    Blue(Color.Blue),
+    Green(Color.Green),
+    Red(Color.Red)
+}
 
 @Parcelize
 class DiceModel(

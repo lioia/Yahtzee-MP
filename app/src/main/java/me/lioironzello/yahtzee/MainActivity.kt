@@ -6,6 +6,7 @@ import android.content.pm.ConfigurationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.ExperimentalMaterialApi
@@ -14,13 +15,14 @@ import androidx.compose.material.Surface
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import com.google.accompanist.pager.ExperimentalPagerApi
-import me.lioironzello.yahtzee.ui.model.SettingsModel
+import me.lioironzello.yahtzee.model.DiceColor
+import me.lioironzello.yahtzee.model.DiceVelocity
+import me.lioironzello.yahtzee.model.SettingsModel
 import me.lioironzello.yahtzee.ui.screen.MainLayout
-import me.lioironzello.yahtzee.ui.theme.Background
-import me.lioironzello.yahtzee.ui.theme.Dice
 import me.lioironzello.yahtzee.ui.theme.YahtzeeTheme
 import java.util.*
 
+@ExperimentalAnimationApi
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 class MainActivity : ComponentActivity() {
@@ -44,8 +46,7 @@ class MainActivity : ComponentActivity() {
             sharedPreferences.getString("language", defaultLanguage) ?: defaultLanguage
         // Setting the application language
         resources.configuration.setLocale(Locale(language))
-        val backgroundColor = Background.values()[sharedPreferences.getInt("background", 0)]
-        val dice = Dice.values()[sharedPreferences.getInt("dice", 0)]
+        val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
         var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
         if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
 
@@ -55,8 +56,7 @@ class MainActivity : ComponentActivity() {
             val settings = rememberSaveable { SettingsModel() }
             settings.language = language
             settings.darkTheme = darkTheme
-            settings.background = backgroundColor
-            settings.dice = dice
+            settings.diceColor = diceColor
             settings.diceVelocity = diceVelocity
             settings.glVersion = glVersion
 
@@ -72,6 +72,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// TODO(add faster velocity, move to Dice model class)
-enum class DiceVelocity { Slow, Medium, Fast }

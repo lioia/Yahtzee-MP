@@ -1,5 +1,6 @@
 package me.lioironzello.yahtzee.ui.screen
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -14,8 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.pager.ExperimentalPagerApi
 import me.lioironzello.yahtzee.R
-import me.lioironzello.yahtzee.ui.model.SettingsModel
+import me.lioironzello.yahtzee.model.SettingsModel
 
+@ExperimentalAnimationApi
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
@@ -25,8 +27,8 @@ fun MainLayout(settingsModel: SettingsModel) {
     when (ScreenRouter.currentScreen) {
         Screens.Home -> Home { num -> numberOfPlayers = num }
         Screens.Settings -> SettingsLayout(settingsModel)
-        Screens.PreviousGames -> TODO()
-        Screens.Tutorial -> TODO()
+        Screens.PreviousGames -> PreviousGames()
+        Screens.Tutorial -> Tutorial()
         Screens.Play -> PlayLayout(settingsModel, numberOfPlayers)
     }
 }
@@ -42,7 +44,7 @@ fun Home(setNumberOfPlayers: (players: Int) -> Unit) {
                 .padding(16.dp),
             horizontalArrangement = Arrangement.End
         ) {
-            IconButton(onClick = { /*TODO*/ }) {
+            IconButton(onClick = { ScreenRouter.navigateTo(Screens.Tutorial) }) {
                 Icon(Icons.Outlined.HelpOutline, contentDescription = "Tutorial")
             }
             IconButton(onClick = { ScreenRouter.navigateTo(Screens.Settings) }) {
@@ -65,7 +67,7 @@ fun Home(setNumberOfPlayers: (players: Int) -> Unit) {
             Text(stringResource(R.string.play), style = MaterialTheme.typography.h5)
         }
         Spacer(modifier = Modifier.height(48.dp))
-        OutlinedButton(onClick = { /*TODO*/ }) {
+        OutlinedButton(onClick = { ScreenRouter.navigateTo(Screens.PreviousGames) }) {
             Text(stringResource(R.string.previous_games), style = MaterialTheme.typography.button)
         }
 

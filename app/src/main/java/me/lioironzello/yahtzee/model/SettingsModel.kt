@@ -1,12 +1,9 @@
-package me.lioironzello.yahtzee.ui.model
+package me.lioironzello.yahtzee.model
 
 import android.os.Parcelable
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import me.lioironzello.yahtzee.DiceVelocity
-import me.lioironzello.yahtzee.ui.theme.Background
-import me.lioironzello.yahtzee.ui.theme.Dice
 
 @Parcelize
 class SettingsModel : Parcelable {
@@ -27,19 +24,11 @@ class SettingsModel : Parcelable {
         }
 
     @IgnoredOnParcel
-    private var _background = mutableStateOf(Background.White)
-    var background: Background
-        get() = _background.value
+    private var _diceColor = mutableStateOf(DiceColor.White)
+    var diceColor: DiceColor
+        get() = _diceColor.value
         set(value) {
-            _background.value = value
-        }
-
-    @IgnoredOnParcel
-    private var _dice = mutableStateOf(Dice.White)
-    var dice: Dice
-        get() = _dice.value
-        set(value) {
-            _dice.value = value
+            _diceColor.value = value
         }
 
     @IgnoredOnParcel
