@@ -39,7 +39,6 @@ fun PreviousGames() {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
                 ) {
                     Text(
                         "Date", modifier = Modifier
@@ -69,26 +68,25 @@ fun PreviousGames() {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
                 ) {
                     Text(
                         game.date, modifier = Modifier
                             .weight(1f, true)
-                            .height(32.dp)
+                            .height(48.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
                         game.player1Score.toString(), modifier = Modifier
                             .weight(1f, true)
-                            .height(32.dp)
+                            .height(48.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
-                        game.player2Score.toString() ?: "-", modifier = Modifier
+                        game.player2Score.toString(), modifier = Modifier
                             .weight(1f, true)
-                            .height(32.dp)
+                            .height(48.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )

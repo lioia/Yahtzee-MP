@@ -14,6 +14,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.pager.ExperimentalPagerApi
 import me.lioironzello.yahtzee.model.DiceColor
 import me.lioironzello.yahtzee.model.DiceVelocity
@@ -45,13 +46,21 @@ class MainActivity : ComponentActivity() {
         val language =
             sharedPreferences.getString("language", defaultLanguage) ?: defaultLanguage
         // Setting the application language
-        resources.configuration.setLocale(Locale(language))
+        val locale = Locale(language)
+        val config = resources.configuration
+        Locale.setDefault(locale)
+        config.setLocale(locale)
+//        resources.configuration.setLocale(locale)
+        createConfigurationContext(config)
+//        resources.updateConfiguration(config, resources.displayMetrics)
+
         val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
         var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
         if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
 
         super.onCreate(savedInstanceState)
         setContent {
+
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
             val settings = rememberSaveable { SettingsModel() }
             settings.language = language

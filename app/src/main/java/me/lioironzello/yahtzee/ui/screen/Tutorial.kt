@@ -14,21 +14,64 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.HorizontalPagerIndicator
 import com.google.accompanist.pager.rememberPagerState
 import kotlinx.coroutines.launch
+import me.lioironzello.yahtzee.R
 
-data class PageInfo(val video: Int?, val topText: String, val bottomText: String)
+data class PageInfo(val video: Int?, val text: String)
 
 object Tutorial {
-    val pages = listOf<PageInfo>(
-        PageInfo(null, "Test", "Test"),
-        PageInfo(null, "Test1", "Test1"),
-        PageInfo(null, "Test2", "Test2"),
-        PageInfo(null, "Test3", "Test3"),
+    val pages = listOf(
+        PageInfo(
+            null, """
+Segna più punti possibili tirando i dadi per realizzare le 13 combinazioni prefissate nel gioco
+
+Una partita consiste in turni durante i quali ogni giocatore sceglie quale combinazione di punteggio deve essere utilizzata
+
+Una volta che una combinazione è stata usata, non può essere usata nuovamente
+
+La partita termina quando tutte le categorie sono state messe a segno
+
+Il vincitore è il giocatore che realizza più punti
+            """
+        ),
+        PageInfo(R.drawable.clip1, "I dadi possono essere lanciati 3 volte in un turno"),
+        PageInfo(R.drawable.clip2, "Puoi bloccare i dadi dopo il tuo primo o secondo lancio"),
+        PageInfo(
+            R.drawable.clip3,
+            "Entro il terzo lancio devi selezionare una combinazione sul tabellone"
+        ),
+        PageInfo(
+            null, """
+Combinazioni
+
+[1-6]: Ottieni più dadi possibili con questa faccia. Il punteggio è la somma di questi dadi specifici
+
+Tris e Poker: 3 e 4 dadi con la stessa faccia. Il punteggio è la somma di tutti i dadi
+
+Full: 3 dadi di un tipo e 2 di un altro. Il punteggio è 25 punti
+
+Piccola Scala: 4 dadi sono ordinati in modo crescente. Il punteggio è 30 punti
+
+Grande Scalaa: 5 dadi sono ordinati in modo crescente. Il punteggio è 40 punti
+
+Yahtzee: 5 dadi uguali. Il punteggio è 50. Se Yahtzee viene ripetuto può essere inserito solo in un'altra combinazione libera con il relativo punteggio
+
+Chance: qualsiasi combinazione ottenuta. Il punteggio è la somma di tutti i dadi
+
+Bonus: si ottiene quando la somma dei punteggi per le 6 combinazioni precedenti supera o raggiunge 63. Il punteggio è 35 punti
+        """.trimIndent()
+        )
     )
 }
 
@@ -66,7 +109,8 @@ fun Tutorial() {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(16.dp)) {
+                .padding(16.dp)
+        ) {
             if (pagerState.currentPage == 0) {
                 Spacer(Modifier.weight(1f, true))
             } else {
@@ -120,11 +164,19 @@ fun Tutorial() {
 
 @Composable
 private fun Page(pageInfo: PageInfo) {
+    val context = LocalContext.current
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(pageInfo.topText)
+        Text(pageInfo.text, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
         if (pageInfo.video != null) {
-            // TODO(render video)
+            AsyncImage(
+                modifier = Modifier.padding(16.dp),
+                model = ImageRequest.Builder(context).data(pageInfo.video).build(),
+                contentDescription = "Clip",
+                imageLoader = ImageLoader.Builder(context).components {
+                    add(ImageDecoderDecoder.Factory())
+                }.build()
+            )
         }
-        Text(pageInfo.bottomText)
     }
 }

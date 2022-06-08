@@ -10,8 +10,12 @@ import me.lioironzello.yahtzee.model.Game
 abstract class GameDatabase : RoomDatabase() {
     companion object {
         private var db: GameDatabase? = null
-        fun getInstance(context: Context) : GameDatabase {
-            if(db == null) db = Room.databaseBuilder(context.applicationContext, GameDatabase::class.java, "previousgames.db").build()
+        fun getInstance(context: Context): GameDatabase {
+            if (db == null) db = Room.databaseBuilder(
+                context.applicationContext,
+                GameDatabase::class.java,
+                "previousgames.db"
+            ).build()
             return db as GameDatabase
         }
     }

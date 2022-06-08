@@ -1,5 +1,6 @@
 package me.lioironzello.yahtzee.ui.screen
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.widget.Toast
@@ -36,6 +37,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
+import com.github.skgmn.composetooltip.AnchorEdge
+import com.github.skgmn.composetooltip.Tooltip
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.material.setBaseColor
@@ -43,10 +46,17 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import me.lioironzello.yahtzee.R
+import me.lioironzello.yahtzee.database.GameDatabase
 import me.lioironzello.yahtzee.model.DiceModel
 import me.lioironzello.yahtzee.model.DiceVelocity
+import me.lioironzello.yahtzee.model.Game
 import me.lioironzello.yahtzee.model.SettingsModel
+import java.util.*
 import kotlin.random.Random
 
 @Composable
@@ -236,7 +246,7 @@ fun Play(
             Spacer(Modifier.size(16.dp))
             players.forEachIndexed { index, player ->
                 Text(
-                    "Player ${index + 1}: ${player.scores.values.sum()}",
+                    "Player ${index + 1}: ${player.scores.values.sum() + if (player.bonusReached) 35 else 0}",
                     modifier = Modifier
                         .weight(1f, true)
                         .align(Alignment.CenterVertically),
@@ -337,9 +347,8 @@ fun Play(
                     val random = Random(System.nanoTime()).nextInt(6, 36)
                     it.number = random % 6
                     if (it.is3D) {
-                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
-                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
-                        println("${it.number}, ${it.kx}, ${it.ky}")
+                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(5, 10) * 4
+                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(5, 10) * 4
                     } else {
                         it.randomValue = random
                     }
@@ -349,8 +358,13 @@ fun Play(
                 Text("Roll")
             }
             Button(onClick = {
+                val score = selectedScore!!
                 currentRoll = 0
-                players[currentPlayer].scores[selectedScore!!.first] = selectedScore!!.second
+                if (score.first == ScoreType.Yahtzee && score.second == 50)
+                    players[currentPlayer].doubleYahtzee = true
+                if (score.first != ScoreType.Yahtzee && score.second == 50)
+                    players[currentPlayer].doubleYahtzee = false
+                players[currentPlayer].scores[score.first] = score.second
                 calculateBonus(players[currentPlayer])
                 if (currentPlayer == players.size - 1) {
                     currentPlayer = 0
@@ -366,30 +380,82 @@ fun Play(
             }
         }
         if (currentRound == 13) {
+            val player1Score =
+                players[0].scores.values.sum() + if (players[0].bonusReached) 35 else 0
+            var player2Score: Int? = null
+            if (players.size == 2) {
+                player2Score =
+                    players[1].scores.values.sum() + if (players[1].bonusReached) 35 else 0
+            }
+
             AlertDialog(onDismissRequest = {},
                 title = { Text("Game Finished") },
                 text = {
                     if (numberOfPlayers == 1)
                         Text("You scored: ${players.first().scores.values.sum()} points")
                     else {
-                        val scores = mutableListOf<Int>()
-                        var winningScore = 0
-                        players.forEachIndexed { index, player ->
-                            val score = player.scores.values.sum()
-                            scores.add(score)
-                            if (score > winningScore) winningScore = score
-                            Text("Player ${index + 1} scored ${player.scores.values.sum()}")
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Player 1 scored $player1Score")
+                            player2Score?.let {
+                                Text("Player 2 scored $it")
+                                if (player1Score == it) Text("Draw")
+                                else if (player1Score > it) Text("Player 1 won with $player1Score points")
+                                else Text("Player 2 won with $it points")
+                            }
                         }
-                        if (scores.distinct().size == 1) Text("Draw")
-                        else Text("Player ${scores.indexOf(winningScore) + 1} won with $winningScore points")
                     }
                 },
-                confirmButton = {},
-                dismissButton = {}
+                confirmButton = {
+                    Button(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            saveGame(context, player1Score, player2Score)
+                        }
+                        dices.forEach {
+                            it.locked = false
+                            it.kx = 0
+                            it.ky = 0
+                            it.randomValue = 1
+                            it.number = 1
+                        }
+                        currentRound = 0
+                        currentRoll = 0
+                        currentPlayer = 0
+                        players.forEach {
+                            it.bonusReached = false
+                            it.lastSixScore = 0
+                            it.scores = mutableMapOf()
+                        }
+                        selectedScore = null
+                    }) {
+                        Text("Play Again")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            saveGame(context, player1Score, player2Score)
+                        }
+                        ScreenRouter.navigateTo(Screens.Home)
+                    }) {
+                        Text("Go back")
+                    }
+                }
             )
         }
         BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
+}
+
+fun saveGame(context: Context, player1Score: Int, player2Score: Int?) {
+    val db = GameDatabase.getInstance(context)
+    val dao = db.gameDao()
+    val currentDate = Calendar.getInstance().time
+    val game = Game(
+        date = currentDate.toString(),
+        player1Score = player1Score,
+        player2Score = player2Score
+    )
+    dao.insert(game)
 }
 
 @Composable
@@ -408,127 +474,32 @@ fun ScoreBoard(
     ) {
         Column(Modifier.weight(1f, true)) {
             ScoreHeader(players.size - 1)
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.One,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Two,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Three,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Four,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Five,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Six,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            BonusScore(players)
+            ScoreType.values().take(6).forEach {
+                Score(
+                    dices,
+                    players,
+                    currentPlayer,
+                    it,
+                    currentRoll,
+                    selectedScoreType,
+                    selectScore
+                )
+            }
+            BonusScore(players, currentPlayer)
         }
         Column(Modifier.weight(1f, true)) {
             ScoreHeader(players.size - 1)
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Tris,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Poker,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Full,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.SmallStraight,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.LargeStraight,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Yahtzee,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
-            Score(
-                dices,
-                players,
-                currentPlayer,
-                ScoreType.Chance,
-                currentRoll,
-                selectedScoreType,
-                selectScore
-            )
+            ScoreType.values().takeLast(7).forEach {
+                Score(
+                    dices,
+                    players,
+                    currentPlayer,
+                    it,
+                    currentRoll,
+                    selectedScoreType,
+                    selectScore
+                )
+            }
         }
     }
 }
@@ -562,7 +533,7 @@ fun ScoreHeader(numberOfPlayers: Int) {
 }
 
 @Composable
-fun BonusScore(players: List<Player>) {
+fun BonusScore(players: List<Player>, currentPlayer: Int) {
     Row(
         Modifier
             .height(56.dp)
@@ -571,16 +542,32 @@ fun BonusScore(players: List<Player>) {
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "Bonus", modifier = Modifier
-                .padding(4.dp)
-                .weight(2f, true),
-            textAlign = TextAlign.Center
-        ) // TODO(translate)
-        players.forEach { player ->
+        var tooltipVisible by remember { mutableStateOf(false) }
+        Box(
+            Modifier
+                .weight(2f, true)
+                .clickable {
+                    tooltipVisible = true
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(3000)
+                        tooltipVisible = false
+                    }
+
+                }) {
+            Text(
+                "Bonus", modifier = Modifier
+                    .padding(4.dp),
+                textAlign = TextAlign.Center
+            ) // TODO(translate)
+            if (tooltipVisible)
+                Tooltip(anchorEdge = AnchorEdge.Top) {
+                    Text("Test")
+                }
+        }
+        players.forEachIndexed { index, player ->
             Column(
                 modifier = Modifier
-                    .padding(4.dp)
+                    .padding(1.dp)
                     .weight(1f, true)
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -588,7 +575,10 @@ fun BonusScore(players: List<Player>) {
             ) {
                 if (player.bonusReached)
                     Icon(Icons.Outlined.Check, contentDescription = "Check")
-                else Text("${player.lastSixScore}/63")
+                else Text(
+                    "${player.lastSixScore}/63",
+                    fontWeight = if (currentPlayer == index) FontWeight.Bold else FontWeight.Light
+                )
             }
         }
     }
@@ -604,6 +594,7 @@ fun Score(
     selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
+    var tooltipVisible by remember { mutableStateOf(false) }
     Row(
         Modifier
             .height(56.dp)
@@ -612,12 +603,27 @@ fun Score(
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            type.name, modifier = Modifier
-                .padding(4.dp)
-                .weight(2f, true),
-            textAlign = TextAlign.Center
-        ) // TODO(translate)
+        Box(
+            Modifier
+                .weight(2f, true)
+                .clickable {
+                    tooltipVisible = true
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(3000)
+                        tooltipVisible = false
+                    }
+
+                }) {
+            Text(
+                type.name, modifier = Modifier
+                    .padding(4.dp),
+                textAlign = TextAlign.Center
+            ) // TODO(translate)
+            if (tooltipVisible)
+                Tooltip(anchorEdge = AnchorEdge.Top) {
+                    Text("Test")
+                }
+        }
         players.forEachIndexed { index, player ->
             var score = "0"
             val savedScore = player.scores[type]
@@ -625,7 +631,7 @@ fun Score(
             if (savedScore == null) {
                 if (currentRoll > 0) {
                     if (currentPlayer == index) {
-                        count = calculateScore(dices, type)
+                        count = calculateScore(dices, type, players[currentPlayer].doubleYahtzee)
                         score = count.toString()
                     }
                 }
@@ -654,12 +660,13 @@ fun Score(
     }
 }
 
-enum class ScoreType { One, Two, Three, Four, Five, Six, Tris, Poker, Full, SmallStraight, LargeStraight, Chance, Yahtzee }
+enum class ScoreType { One, Two, Three, Four, Five, Six, Tris, Poker, Full, SmallStraight, LargeStraight, Yahtzee, Chance }
 
 class Player {
-    val scores = mutableMapOf<ScoreType, Int>()
+    var scores = mutableMapOf<ScoreType, Int>()
     var bonusReached = false
     var lastSixScore = 0
+    var doubleYahtzee = false
 }
 
 fun calculateBonus(player: Player) {
@@ -669,8 +676,8 @@ fun calculateBonus(player: Player) {
     player.lastSixScore = lastSix.sum()
 }
 
-// TODO(Se Yahtzee viene ripetuto può essere inserito solo in un'altra combinazione libera con il relativo punteggio.)
-fun calculateScore(dices: List<Int>, type: ScoreType): Int {
+fun calculateScore(dices: List<Int>, type: ScoreType, doubleYahtzee: Boolean): Int {
+    if (doubleYahtzee && dices.distinct().size == 1) return 50
     when (type) {
         ScoreType.One -> return dices.filter { dice -> dice == 1 }.size
         ScoreType.Two -> return dices.filter { dice -> dice == 2 }.size * 2
