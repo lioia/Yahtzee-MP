@@ -1,5 +1,6 @@
 package me.lioironzello.yahtzee.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.scaleIn
@@ -15,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -28,49 +30,29 @@ import com.google.accompanist.pager.rememberPagerState
 import kotlinx.coroutines.launch
 import me.lioironzello.yahtzee.R
 
-data class PageInfo(val video: Int?, val text: String)
+data class PageInfo(val video: Int?, val text: List<Int>)
 
 object Tutorial {
     val pages = listOf(
-        PageInfo(
-            null, """
-Segna più punti possibili tirando i dadi per realizzare le 13 combinazioni prefissate nel gioco
-
-Una partita consiste in turni durante i quali ogni giocatore sceglie quale combinazione di punteggio deve essere utilizzata
-
-Una volta che una combinazione è stata usata, non può essere usata nuovamente
-
-La partita termina quando tutte le categorie sono state messe a segno
-
-Il vincitore è il giocatore che realizza più punti
-            """
-        ),
-        PageInfo(R.drawable.clip1, "I dadi possono essere lanciati 3 volte in un turno"),
-        PageInfo(R.drawable.clip2, "Puoi bloccare i dadi dopo il tuo primo o secondo lancio"),
+        PageInfo(null, listOf(R.string.tutorial_one)),
+        PageInfo(R.drawable.clip1, listOf(R.string.tutorial_two)),
+        PageInfo(R.drawable.clip2, listOf(R.string.tutorial_three)),
         PageInfo(
             R.drawable.clip3,
-            "Entro il terzo lancio devi selezionare una combinazione sul tabellone"
+            listOf(R.string.tutorial_four)
         ),
         PageInfo(
-            null, """
-Combinazioni
-
-[1-6]: Ottieni più dadi possibili con questa faccia. Il punteggio è la somma di questi dadi specifici
-
-Tris e Poker: 3 e 4 dadi con la stessa faccia. Il punteggio è la somma di tutti i dadi
-
-Full: 3 dadi di un tipo e 2 di un altro. Il punteggio è 25 punti
-
-Piccola Scala: 4 dadi sono ordinati in modo crescente. Il punteggio è 30 punti
-
-Grande Scalaa: 5 dadi sono ordinati in modo crescente. Il punteggio è 40 punti
-
-Yahtzee: 5 dadi uguali. Il punteggio è 50. Se Yahtzee viene ripetuto può essere inserito solo in un'altra combinazione libera con il relativo punteggio
-
-Chance: qualsiasi combinazione ottenuta. Il punteggio è la somma di tutti i dadi
-
-Bonus: si ottiene quando la somma dei punteggi per le 6 combinazioni precedenti supera o raggiunge 63. Il punteggio è 35 punti
-        """.trimIndent()
+            null, listOf(
+                R.string.tutorial_categories,
+                R.string.tutorial_one_to_six,
+                R.string.tutorial_tris_poker,
+                R.string.tutorial_full,
+                R.string.tutorial_small_straight,
+                R.string.tutorial_large_straight,
+                R.string.tutorial_yahtzee,
+                R.string.tutorial_chance,
+                R.string.tutorial_bonus
+            )
         )
     )
 }
@@ -138,7 +120,11 @@ fun Tutorial() {
                     }
                 }
             }, modifier = Modifier.weight(1f, true)) {
-                Text(if (pagerState.currentPage == pagerState.pageCount - 1) "Close" else "Skip")
+                Text(
+                    if (pagerState.currentPage == pagerState.pageCount - 1)
+                        stringResource(R.string.close)
+                    else stringResource(R.string.skip)
+                )
             }
             if (pagerState.currentPage == pagerState.pageCount - 1) {
                 Spacer(Modifier.weight(1f, true))
@@ -159,6 +145,7 @@ fun Tutorial() {
                 }
             }
         }
+        BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }
 
@@ -167,7 +154,11 @@ private fun Page(pageInfo: PageInfo) {
     val context = LocalContext.current
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(pageInfo.text, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
+        Text(
+            pageInfo.text.map { stringResource(it) }.joinToString("\n\n"),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(16.dp)
+        )
         if (pageInfo.video != null) {
             AsyncImage(
                 modifier = Modifier.padding(16.dp),

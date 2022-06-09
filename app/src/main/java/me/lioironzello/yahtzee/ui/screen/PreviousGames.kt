@@ -1,5 +1,6 @@
 package me.lioironzello.yahtzee.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,7 +13,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.database.GameDatabase
 
 @Composable
@@ -25,7 +28,7 @@ fun PreviousGames() {
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Previous Games") },
+            title = { Text(stringResource(R.string.previous_games)) },
             navigationIcon = {
                 IconButton(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
                     Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
@@ -41,21 +44,21 @@ fun PreviousGames() {
                         .fillMaxWidth()
                 ) {
                     Text(
-                        "Date", modifier = Modifier
+                        stringResource(R.string.date), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
-                        "Player 1 Score", modifier = Modifier
+                        stringResource(R.string.player_score, 1), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
-                        "Player 2 Score", modifier = Modifier
+                        stringResource(R.string.player_score, 2), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
@@ -65,6 +68,7 @@ fun PreviousGames() {
             }
             items(games.size) { index ->
                 val game = games[index]
+                val player2Score = if(game.player2Score == null) "-" else game.player2Score.toString()
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -72,26 +76,27 @@ fun PreviousGames() {
                     Text(
                         game.date, modifier = Modifier
                             .weight(1f, true)
-                            .height(48.dp)
+                            .height(52.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
                         game.player1Score.toString(), modifier = Modifier
                             .weight(1f, true)
-                            .height(48.dp)
+                            .height(52.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
-                        game.player2Score.toString(), modifier = Modifier
+                        player2Score, modifier = Modifier
                             .weight(1f, true)
-                            .height(48.dp)
+                            .height(52.dp)
                             .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                 }
             }
         }
+        BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }

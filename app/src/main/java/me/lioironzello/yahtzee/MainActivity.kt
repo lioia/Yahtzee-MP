@@ -40,33 +40,19 @@ class MainActivity : ComponentActivity() {
 
         val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
         // Getting settings from SharedPreferences
-        val defaultLanguage =
-            if (resources.configuration.locales.get(0) == Locale.ITALIAN) "it"
-            else "en"
-        val language =
-            sharedPreferences.getString("language", defaultLanguage) ?: defaultLanguage
-        // Setting the application language
-        val locale = Locale(language)
-        val config = resources.configuration
-        Locale.setDefault(locale)
-        config.setLocale(locale)
-//        resources.configuration.setLocale(locale)
-        createConfigurationContext(config)
-//        resources.updateConfiguration(config, resources.displayMetrics)
-
         val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
         var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
+        val soundEnabled = sharedPreferences.getBoolean("soundEnabled", true)
         if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
 
         super.onCreate(savedInstanceState)
         setContent {
-
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
             val settings = rememberSaveable { SettingsModel() }
-            settings.language = language
             settings.darkTheme = darkTheme
             settings.diceColor = diceColor
             settings.diceVelocity = diceVelocity
+            settings.soundEnabled = soundEnabled
             settings.glVersion = glVersion
 
             YahtzeeTheme(settings.darkTheme) {

@@ -16,4 +16,41 @@
     <string name="loading">Loading</string>
     <string name="close">Close</string>
     <string name="select_num_players">"Select number of players: "</string>
+    <string name="libraries">Libraries</string>
+    <string name="link" translatable="false">Link</string>
+    <string name="single_player">Single player</string>
+    <string name="local">1 vs 1 Local</string>
+    <string name="date">Date</string>
+    <string name="player_score">Player %1$d</string>
+    <string name="roll">Roll</string>
+    <string name="save_score">Save Score</string>
+    <string name="type">Type</string>
+    <string name="one">One</string>
+    <string name="two">Two</string>
+    <string name="three">Three</string>
+    <string name="four">Four</string>
+    <string name="five">Five</string>
+    <string name="six">Six</string>
+    <string name="tris" translatable="false">Tris</string>
+    <string name="poker" translatable="false">Poker</string>
+    <string name="full" translatable="false">Full</string>
+    <string name="small_straight">Small Straight</string>
+    <string name="large_straight">Large Straight</string>
+    <string name="chance" translatable="false">Chance</string>
+    <string name="bonus" translatable="false">Bonus</string>
+    <string name="tutorial_one">Scores the highest points possible rolling the dices to complete the 13 categories available in the game\n\nA game consists of rounds during which the player has to choose which score category wants to use\n\nOnce a category has been used, it can\'t be used again\n\nThe game finishes when all the categories are completed\n\nThe winner is the player that scores the highest points</string>
+    <string name="tutorial_two">The dices can be rolled 3 times in a turn</string>
+    <string name="tutorial_three">You can lock the dices after the first or second roll</string>
+    <string name="tutorial_four">By the third roll you have to choose a category on the score board</string>
+    <string name="tutorial_categories">Categories</string>
+    <string name="tutorial_one_to_six">[1–6]: Get as many dice as possible with this face. The score is the sum of these specific dices</string>
+    <string name="tutorial_tris_poker">Tris and Poker: 3 and 4 dices with the same face. The score is the sum of all the dices</string>
+    <string name="tutorial_full">Full: 3 dices of the same type and 2 of another type. The score is 25 points</string>
+    <string name="tutorial_small_straight">Small Straight: 4 dices in ascending order. The score is 30 points</string>
+    <string name="tutorial_large_straight">Large Straight: 5 dices in ascending order. The score is 40 points</string>
+    <string name="tutorial_yahtzee">Yahtzee: 5 equal dices. The score is 50 points. If Yahtzee is repeated, it can be inserted in another free category assigning 50 points</string>
+    <string name="tutorial_chance">Chance: any combination. The points is the sum of all the dices</string>
+    <string name="tutorial_bonus">Bonus: it is obtained when the sum of the scores for the 6 previous combinations exceeds or reaches 63. The score is 35 points</string>
+    <string name="sound_effect">Sound Effect</string>
+    <string name="skip">Skip</string>
 </resources>

@@ -81,14 +81,14 @@ fun Home(setNumberOfPlayers: (players: Int) -> Unit) {
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
-                            Text("1")
+                            Text(stringResource(R.string.single_player))
                         }
                         Button(onClick = {
                             setNumberOfPlayers(2)
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
-                            Text("2")
+                            Text(stringResource(R.string.local))
                         }
                     }
                 },

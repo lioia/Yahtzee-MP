@@ -11,18 +11,18 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.calculateCurrentOffsetForPage
+import com.google.accompanist.pager.*
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.model.DiceColor
 import me.lioironzello.yahtzee.model.DiceVelocity
@@ -35,18 +35,17 @@ import kotlin.math.absoluteValue
 fun SettingsLayout(settingsModel: SettingsModel) {
     val context = LocalContext.current
 
-    val languages = mapOf("en" to "English", "it" to "Italiano")
-    var languageExpanded by remember { mutableStateOf(false) }
     var velocityExpanded by remember { mutableStateOf(false) }
 
-    val language = rememberSaveable { mutableStateOf(settingsModel.language) }
-    val darkTheme = rememberSaveable { mutableStateOf(settingsModel.darkTheme) }
-    val dice = rememberSaveable { mutableStateOf(settingsModel.diceColor) }
-    val diceVelocity = rememberSaveable { mutableStateOf(settingsModel.diceVelocity) }
+    var soundEnabled by remember { mutableStateOf(settingsModel.soundEnabled) }
+    var darkTheme by remember { mutableStateOf(settingsModel.darkTheme) }
+    var dice by remember { mutableStateOf(settingsModel.diceColor) }
+    var diceVelocity by remember { mutableStateOf(settingsModel.diceVelocity) }
+    val pagerState = rememberPagerState()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Settings") },
+            title = { Text(stringResource(R.string.settings)) },
             navigationIcon = {
                 IconButton(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
                     Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
@@ -55,36 +54,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             backgroundColor = MaterialTheme.colors.background,
             elevation = 0.dp
         )
-        Column(Modifier.padding(16.dp)) {
-            // Language
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.language), style = MaterialTheme.typography.body1)
-                ExposedDropdownMenuBox(
-                    expanded = languageExpanded,
-                    onExpandedChange = { languageExpanded = !languageExpanded }) {
-                    OutlinedTextField(
-                        modifier = Modifier.width(192.dp),
-                        value = languages[language.value] ?: "English",
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
-                    )
-                    ExposedDropdownMenu(
-                        expanded = languageExpanded,
-                        onDismissRequest = { languageExpanded = false }) {
-                        languages.forEach { (code, lang) ->
-                            DropdownMenuItem(onClick = {
-                                language.value = code
-                                languageExpanded = false
-                            }) { Text(lang) }
-                        }
-                    }
-                }
-            }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Dark Theme
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -92,15 +62,27 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             ) {
                 Text(stringResource(R.string.dark_theme), style = MaterialTheme.typography.body1)
                 Switch(
-                    checked = darkTheme.value,
-                    onCheckedChange = { darkTheme.value = it }
+                    checked = darkTheme,
+                    onCheckedChange = { darkTheme = it }
+                )
+            }
+            // Sound Enabled
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.sound_effect), style = MaterialTheme.typography.body1)
+                Switch(
+                    checked = soundEnabled,
+                    onCheckedChange = { soundEnabled = it }
                 )
             }
             // Dice Color
             Text(stringResource(R.string.dice_color), style = MaterialTheme.typography.body1)
             HorizontalPager(
                 count = DiceColor.values().size,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(8.dp),
+                state = pagerState
             ) { page ->
                 Card(
                     Modifier
@@ -129,18 +111,21 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                         }
                 ) {
                     val diceColor = DiceColor.values()[page]
-//                val border = if (diceColor == dice.value) 6.dp else 0.dp
                     val borderColor =
-                        if (diceColor == dice.value) Color(255, 244, 56) else Color.Black
+                        if (diceColor == dice) Color(255, 244, 56) else Color.Black
                     Box(
                         modifier = Modifier
                             .border(BorderStroke(6.dp, borderColor))
                             .size(80.dp)
                             .background(diceColor.color)
-                            .clickable { dice.value = diceColor }
+                            .clickable { dice = diceColor }
                     )
                 }
             }
+            HorizontalPagerIndicator(
+                pagerState = pagerState,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
             // Dice Velocity
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -153,7 +138,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                     onExpandedChange = { velocityExpanded = !velocityExpanded }) {
                     OutlinedTextField(
                         modifier = Modifier.width(192.dp),
-                        value = diceVelocity.value.name,
+                        value = stringResource(diceVelocity.text),
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = velocityExpanded) },
@@ -163,47 +148,75 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                         onDismissRequest = { velocityExpanded = false }) {
                         if (settingsModel.glVersion == 3)
                             DropdownMenuItem(onClick = {
-                                diceVelocity.value = DiceVelocity.Slow
+                                diceVelocity = DiceVelocity.Slow
                                 velocityExpanded = false
                             }) { Text(stringResource(R.string.slow)) }
                         DropdownMenuItem(onClick = {
-                            diceVelocity.value = DiceVelocity.Medium
+                            diceVelocity = DiceVelocity.Medium
                             velocityExpanded = false
                         }) { Text(stringResource(R.string.medium)) }
                         DropdownMenuItem(onClick = {
-                            diceVelocity.value = DiceVelocity.Fast
+                            diceVelocity = DiceVelocity.Fast
                             velocityExpanded = false
                         }) { Text(stringResource(R.string.fast)) }
                     }
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.End)
-                    .width(128.dp)
-                    .height(48.dp),
-                onClick = {
-                    settingsModel.language = language.value
-                    settingsModel.darkTheme = darkTheme.value
-                    settingsModel.diceColor = dice.value
-                    settingsModel.diceVelocity = diceVelocity.value
-                    val sharedPreferences =
-                        context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-                    val editor = sharedPreferences.edit()
-                    editor.putString("language", settingsModel.language)
-                    editor.putBoolean("darkTheme", settingsModel.darkTheme)
-                    editor.putInt("dice", settingsModel.diceColor.ordinal)
-                    editor.putInt("diceVelocity", settingsModel.diceVelocity.ordinal)
-                    editor.apply()
-                    ScreenRouter.navigateTo(Screens.Home)
-                }) {
-                Text(stringResource(R.string.save), style = MaterialTheme.typography.body1)
-            }
+        }
+        Spacer(modifier = Modifier.weight(1f, true))
+        Button(
+            modifier = Modifier
+                .padding(16.dp)
+                .align(Alignment.End)
+                .width(128.dp)
+                .height(48.dp),
+            onClick = {
+                settingsModel.darkTheme = darkTheme
+                settingsModel.diceColor = dice
+                settingsModel.diceVelocity = diceVelocity
+                settingsModel.soundEnabled = soundEnabled
+                val sharedPreferences =
+                    context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val editor = sharedPreferences.edit()
+                editor.putBoolean("darkTheme", settingsModel.darkTheme)
+                editor.putInt("dice", settingsModel.diceColor.ordinal)
+                editor.putInt("diceVelocity", settingsModel.diceVelocity.ordinal)
+                editor.putBoolean("soundEnabled", settingsModel.soundEnabled)
+                editor.apply()
+                ScreenRouter.navigateTo(Screens.Home)
+            }) {
+            Text(stringResource(R.string.save), style = MaterialTheme.typography.body1)
+        }
+        Column(Modifier.padding(16.dp)) {
+            Divider()
+            Text(stringResource(R.string.libraries), fontWeight = FontWeight.Bold)
+            LibraryRow(
+                name = "Accompanist-Pager",
+                url = "https://google.github.io/accompanist/pager/"
+            )
+            LibraryRow(name = "SceneView", url = "https://github.com/SceneView/sceneview-android")
+            LibraryRow(name = "Coil", url = "https://github.com/coil-kt/coil")
+            LibraryRow(name = "ComposeTooltip", url = "https://github.com/skgmn/ComposeTooltip")
         }
         BackHandler {
             ScreenRouter.navigateTo(Screens.Home)
         }
+    }
+}
+
+@Composable
+fun LibraryRow(name: String, url: String) {
+    val uriHandler = LocalUriHandler.current
+
+    Row(Modifier.fillMaxWidth()) {
+        Text(name, modifier = Modifier.weight(2f, true))
+        Text(
+            stringResource(R.string.link),
+            modifier = Modifier
+                .weight(1f, true)
+                .clickable { uriHandler.openUri(url) },
+            color = Color(0, 116, 204),
+            textDecoration = TextDecoration.Underline
+        )
     }
 }

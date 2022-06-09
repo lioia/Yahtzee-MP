@@ -3,12 +3,13 @@ package me.lioironzello.yahtzee.ui.screen
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.widget.Toast
+import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateInt
-import androidx.compose.animation.core.animateOffset
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.*
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
@@ -32,13 +32,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import com.github.skgmn.composetooltip.AnchorEdge
 import com.github.skgmn.composetooltip.Tooltip
+import com.github.skgmn.composetooltip.rememberTooltipStyle
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.material.setBaseColor
@@ -56,9 +59,15 @@ import me.lioironzello.yahtzee.model.DiceModel
 import me.lioironzello.yahtzee.model.DiceVelocity
 import me.lioironzello.yahtzee.model.Game
 import me.lioironzello.yahtzee.model.SettingsModel
-import java.util.*
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlin.random.Random
 
+@ExperimentalAnimationApi
 @Composable
 fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
     var referenceModel by remember { mutableStateOf<RenderableInstance?>(null) }
@@ -172,6 +181,7 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
     }
 }
 
+@ExperimentalAnimationApi
 @Composable
 fun Play(
     settingsModel: SettingsModel,
@@ -223,6 +233,17 @@ fun Play(
     var animate by remember { mutableStateOf(false) }
     val transition = updateTransition(targetState = animate, label = "Cube")
     var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
+    var goBackDialogVisible by remember { mutableStateOf(false) }
+    var yahtzeeAnimation by remember { mutableStateOf(false) }
+
+    val delay = when (settingsModel.diceVelocity) {
+        DiceVelocity.Slow -> 1000
+        DiceVelocity.Medium -> 500
+        DiceVelocity.Fast -> 0
+    }
+
+    val mediumSound = MediaPlayer.create(context, R.raw.medium)
+    val slowSound = MediaPlayer.create(context, R.raw.slow)
 
     Box(
         Modifier
@@ -240,13 +261,16 @@ fun Play(
         Modifier.fillMaxSize()
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            IconButton(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
+            IconButton(onClick = { goBackDialogVisible = true }) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
             }
             Spacer(Modifier.size(16.dp))
             players.forEachIndexed { index, player ->
                 Text(
-                    "Player ${index + 1}: ${player.scores.values.sum() + if (player.bonusReached) 35 else 0}",
+                    stringResource(
+                        R.string.player_score,
+                        index + 1
+                    ) + ": ${player.scores.values.sum() + if (player.bonusReached) 35 else 0}",
                     modifier = Modifier
                         .weight(1f, true)
                         .align(Alignment.CenterVertically),
@@ -260,6 +284,14 @@ fun Play(
             players,
             currentPlayer,
             currentRoll,
+            delay,
+            {
+                yahtzeeAnimation = true
+                CoroutineScope(Dispatchers.Default).launch {
+                    delay(1000)
+                    yahtzeeAnimation = false
+                }
+            },
             selectedScore?.first
         ) { score, value ->
             selectedScore = Pair(score, value)
@@ -272,59 +304,7 @@ fun Play(
         ) {
             dices.forEach {
                 Column {
-                    when (settingsModel.diceVelocity) {
-                        DiceVelocity.Slow -> {
-                            val rotation by transition.animateOffset(
-                                label = "Cube",
-                                transitionSpec = { tween(durationMillis = 1000) }) { state ->
-                                if (state) Offset(
-                                    it.kx * 90f,
-                                    it.ky * 90f
-                                ) else Offset(it.modelNode.rotation.x, it.modelNode.rotation.y)
-                            }
-                            it.modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
-                            val bgColor = MaterialTheme.colors.background
-
-                            AndroidView(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clickable {
-                                        Toast
-                                            .makeText(context, "Click", Toast.LENGTH_LONG)
-                                            .show()
-                                    },
-                                factory = { context ->
-                                    SceneView(context).apply {
-                                        mainLight = null
-                                        backgroundColor =
-                                            colorOf(bgColor.red, bgColor.green, bgColor.blue)
-                                        addChild(it.modelNode)
-                                        gestureDetector.moveGestureDetector = null
-                                        gestureDetector.rotateGestureDetector = null
-                                        gestureDetector.scaleGestureDetector = null
-                                        gestureDetector.cameraManipulator = null
-                                    }
-                                }
-                            )
-                        }
-                        else -> {
-                            val value = if (settingsModel.diceVelocity == DiceVelocity.Medium) {
-                                transition.animateInt(
-                                    label = "Cube",
-                                    transitionSpec = { tween(durationMillis = 500) }) { state ->
-                                    if (state) it.randomValue else it.number
-                                }.value
-                            } else {
-                                it.randomValue
-                            }
-
-                            Image(
-                                it.faces[value % 6].asImageBitmap(),
-                                contentDescription = "Face",
-                                modifier = Modifier.size(64.dp)
-                            )
-                        }
-                    }
+                    Dice(it, settingsModel.diceVelocity, transition)
                     IconButton(
                         onClick = { if (currentRoll > 0) it.locked = !it.locked },
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -341,21 +321,25 @@ fun Play(
         // Buttons
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Button(onClick = {
+                if (settingsModel.soundEnabled) {
+                    if (settingsModel.diceVelocity == DiceVelocity.Slow) slowSound.start()
+                    else mediumSound.start()
+                }
                 currentRoll++
                 dices.forEach {
                     if (it.locked) return@forEach
                     val random = Random(System.nanoTime()).nextInt(6, 36)
                     it.number = random % 6
                     if (it.is3D) {
-                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(5, 10) * 4
-                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(5, 10) * 4
+                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
+                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
                     } else {
                         it.randomValue = random
                     }
                     animate = true
                 }
             }, enabled = currentRoll < 3) {
-                Text("Roll")
+                Text(stringResource(R.string.roll))
             }
             Button(onClick = {
                 val score = selectedScore!!
@@ -376,7 +360,7 @@ fun Play(
                 dices.forEach { it.locked = false }
 
             }, enabled = selectedScore != null) {
-                Text("Save Score")
+                Text(stringResource(R.string.save_score))
             }
         }
         if (currentRound == 13) {
@@ -392,7 +376,7 @@ fun Play(
                 title = { Text("Game Finished") },
                 text = {
                     if (numberOfPlayers == 1)
-                        Text("You scored: ${players.first().scores.values.sum()} points")
+                        Text("You scored: $player1Score points")
                     else {
                         Column(Modifier.padding(16.dp)) {
                             Text("Player 1 scored $player1Score")
@@ -442,16 +426,102 @@ fun Play(
                 }
             )
         }
-        BackHandler { ScreenRouter.navigateTo(Screens.Home) }
+        AnimatedVisibility(yahtzeeAnimation, enter = scaleIn(), exit = scaleOut()) {
+            Text(
+                stringResource(R.string.yahtzee),
+                style = MaterialTheme.typography.h1,
+                fontFamily = FontFamily.Cursive,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (goBackDialogVisible) {
+            AlertDialog(
+                title = { Text("Are you sure you want to go back?") },
+                text = { Text("If you go back, the progress will be lost") },
+                onDismissRequest = { goBackDialogVisible = false },
+                confirmButton = {
+                    Button(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
+                        Text("Go Back")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { goBackDialogVisible = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+        BackHandler { goBackDialogVisible = true }
+    }
+}
+
+@Composable
+fun Dice(dice: DiceModel, diceVelocity: DiceVelocity, transition: Transition<Boolean>) {
+    when (diceVelocity) {
+        DiceVelocity.Slow -> {
+            val rotation by transition.animateIntSize(
+                label = "Cube",
+                transitionSpec = { tween(durationMillis = 1000) }) { state ->
+                if (state) IntSize(
+                    dice.kx * 90,
+                    dice.ky * 90
+                ) else IntSize(
+                    dice.modelNode.modelRotation.x.toInt(),
+                    dice.modelNode.modelRotation.y.toInt()
+                )
+            }
+            dice.modelNode.modelRotation = Rotation(
+                rotation.width.toFloat(),
+                rotation.height.toFloat(), 90f
+            )
+            val bgColor = MaterialTheme.colors.background
+
+            AndroidView(
+                modifier = Modifier.size(80.dp),
+                factory = { context ->
+                    SceneView(context).apply {
+                        mainLight = null
+                        backgroundColor =
+                            colorOf(bgColor.red, bgColor.green, bgColor.blue)
+                        addChild(dice.modelNode)
+                        gestureDetector.moveGestureDetector = null
+                        gestureDetector.rotateGestureDetector = null
+                        gestureDetector.scaleGestureDetector = null
+                        gestureDetector.cameraManipulator = null
+                    }
+                }
+            )
+        }
+        else -> {
+            val value = if (diceVelocity == DiceVelocity.Medium) {
+                transition.animateInt(
+                    label = "Cube",
+                    transitionSpec = { tween(durationMillis = 500) }) { state ->
+                    if (state) dice.randomValue else dice.number
+                }.value
+            } else {
+                dice.randomValue
+            }
+
+            Image(
+                dice.faces[value % 6].asImageBitmap(),
+                contentDescription = "Face",
+                modifier = Modifier.size(64.dp)
+            )
+        }
     }
 }
 
 fun saveGame(context: Context, player1Score: Int, player2Score: Int?) {
     val db = GameDatabase.getInstance(context)
     val dao = db.gameDao()
-    val currentDate = Calendar.getInstance().time
+
+    val date = LocalDate.now()
+    val time = LocalTime.now()
+    val zonedDateTime = ZonedDateTime.of(date, time, ZoneId.systemDefault())
+
     val game = Game(
-        date = currentDate.toString(),
+        date = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).format(zonedDateTime),
         player1Score = player1Score,
         player2Score = player2Score
     )
@@ -464,6 +534,8 @@ fun ScoreBoard(
     players: List<Player>,
     currentPlayer: Int,
     currentRoll: Int,
+    delay: Int,
+    updateYahtzee: () -> Unit,
     selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
@@ -481,6 +553,8 @@ fun ScoreBoard(
                     currentPlayer,
                     it,
                     currentRoll,
+                    delay,
+                    updateYahtzee,
                     selectedScoreType,
                     selectScore
                 )
@@ -496,6 +570,8 @@ fun ScoreBoard(
                     currentPlayer,
                     it,
                     currentRoll,
+                    delay,
+                    updateYahtzee,
                     selectedScoreType,
                     selectScore
                 )
@@ -513,11 +589,11 @@ fun ScoreHeader(numberOfPlayers: Int) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            "Type", modifier = Modifier
+            stringResource(R.string.type), modifier = Modifier
                 .padding(4.dp)
                 .weight(2f, true),
             textAlign = TextAlign.Center
-        ) // TODO(translate)
+        )
         for (i in 0..numberOfPlayers) {
             Column(
                 modifier = Modifier
@@ -543,6 +619,11 @@ fun BonusScore(players: List<Player>, currentPlayer: Int) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         var tooltipVisible by remember { mutableStateOf(false) }
+        val tooltipStyle = rememberTooltipStyle().apply {
+            color = MaterialTheme.colors.background
+            tipWidth = 0.dp
+            tipHeight = 0.dp
+        }
         Box(
             Modifier
                 .weight(2f, true)
@@ -555,13 +636,20 @@ fun BonusScore(players: List<Player>, currentPlayer: Int) {
 
                 }) {
             Text(
-                "Bonus", modifier = Modifier
+                stringResource(R.string.bonus), modifier = Modifier
                     .padding(4.dp),
                 textAlign = TextAlign.Center
-            ) // TODO(translate)
+            )
             if (tooltipVisible)
-                Tooltip(anchorEdge = AnchorEdge.Top) {
-                    Text("Test")
+                Tooltip(
+                    anchorEdge = AnchorEdge.Top,
+                    tooltipStyle = tooltipStyle,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.tutorial_bonus),
+                        style = MaterialTheme.typography.caption
+                    )
                 }
         }
         players.forEachIndexed { index, player ->
@@ -591,10 +679,18 @@ fun Score(
     currentPlayer: Int,
     type: ScoreType,
     currentRoll: Int,
+    delay: Int,
+    updateYahtzee: () -> Unit,
     selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
     var tooltipVisible by remember { mutableStateOf(false) }
+    val tooltipStyle = rememberTooltipStyle().apply {
+        color = MaterialTheme.colors.background
+        tipWidth = 0.dp
+        tipHeight = 0.dp
+    }
+
     Row(
         Modifier
             .height(56.dp)
@@ -612,16 +708,19 @@ fun Score(
                         delay(3000)
                         tooltipVisible = false
                     }
-
                 }) {
             Text(
-                type.name, modifier = Modifier
+                stringResource(type.text), modifier = Modifier
                     .padding(4.dp),
                 textAlign = TextAlign.Center
-            ) // TODO(translate)
+            )
             if (tooltipVisible)
-                Tooltip(anchorEdge = AnchorEdge.Top) {
-                    Text("Test")
+                Tooltip(
+                    anchorEdge = AnchorEdge.Top,
+                    tooltipStyle = tooltipStyle,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(stringResource(type.helperText), style = MaterialTheme.typography.caption)
                 }
         }
         players.forEachIndexed { index, player ->
@@ -629,10 +728,12 @@ fun Score(
             val savedScore = player.scores[type]
             var count = 0
             if (savedScore == null) {
-                if (currentRoll > 0) {
-                    if (currentPlayer == index) {
+                if (currentRoll > 0 && currentPlayer == index) {
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(delay.toLong())
                         count = calculateScore(dices, type, players[currentPlayer].doubleYahtzee)
                         score = count.toString()
+                        if (count == 50) updateYahtzee()
                     }
                 }
             } else score = savedScore.toString()
@@ -660,7 +761,21 @@ fun Score(
     }
 }
 
-enum class ScoreType { One, Two, Three, Four, Five, Six, Tris, Poker, Full, SmallStraight, LargeStraight, Yahtzee, Chance }
+enum class ScoreType(val text: Int, val helperText: Int) {
+    One(R.string.one, R.string.tutorial_one_to_six),
+    Two(R.string.two, R.string.tutorial_one_to_six),
+    Three(R.string.three, R.string.tutorial_one_to_six),
+    Four(R.string.four, R.string.tutorial_one_to_six),
+    Five(R.string.five, R.string.tutorial_one_to_six),
+    Six(R.string.six, R.string.tutorial_one_to_six),
+    Tris(R.string.tris, R.string.tutorial_tris_poker),
+    Poker(R.string.poker, R.string.tutorial_tris_poker),
+    Full(R.string.full, R.string.tutorial_full),
+    SmallStraight(R.string.small_straight, R.string.tutorial_small_straight),
+    LargeStraight(R.string.large_straight, R.string.tutorial_large_straight),
+    Yahtzee(R.string.yahtzee, R.string.tutorial_yahtzee),
+    Chance(R.string.chance, R.string.tutorial_chance)
+}
 
 class Player {
     var scores = mutableMapOf<ScoreType, Int>()

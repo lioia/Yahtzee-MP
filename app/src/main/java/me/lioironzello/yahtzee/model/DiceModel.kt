@@ -11,8 +11,9 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import me.lioironzello.yahtzee.R
 
-enum class DiceVelocity { Slow, Medium, Fast }
+enum class DiceVelocity(val text: Int) { Slow(R.string.slow), Medium(R.string.medium), Fast(R.string.fast) }
 enum class DiceColor(val color: Color) {
     White(Color.White),
     Blue(Color.Blue),

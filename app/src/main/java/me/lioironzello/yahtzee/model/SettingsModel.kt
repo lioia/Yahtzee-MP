@@ -8,14 +8,6 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 class SettingsModel : Parcelable {
     @IgnoredOnParcel
-    private var _language = mutableStateOf("")
-    var language: String
-        get() = _language.value
-        set(value) {
-            _language.value = value
-        }
-
-    @IgnoredOnParcel
     private var _darkTheme = mutableStateOf(false)
     var darkTheme: Boolean
         get() = _darkTheme.value
@@ -37,6 +29,14 @@ class SettingsModel : Parcelable {
         get() = _diceVelocity.value
         set(value) {
             _diceVelocity.value = value
+        }
+
+    @IgnoredOnParcel
+    private var _soundEnabled = mutableStateOf(true)
+    var soundEnabled: Boolean
+        get() = _soundEnabled.value
+        set(value) {
+            _soundEnabled.value = value
         }
 
     @IgnoredOnParcel
