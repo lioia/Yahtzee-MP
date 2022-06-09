@@ -268,7 +268,7 @@ fun Play(
             players.forEachIndexed { index, player ->
                 Text(
                     stringResource(
-                        R.string.player_score,
+                        R.string.player_index,
                         index + 1
                     ) + ": ${player.scores.values.sum() + if (player.bonusReached) 35 else 0}",
                     modifier = Modifier
@@ -373,18 +373,18 @@ fun Play(
             }
 
             AlertDialog(onDismissRequest = {},
-                title = { Text("Game Finished") },
+                title = { Text(stringResource(R.string.game_finished)) },
                 text = {
                     if (numberOfPlayers == 1)
-                        Text("You scored: $player1Score points")
+                        Text(stringResource(R.string.your_score, player1Score))
                     else {
                         Column(Modifier.padding(16.dp)) {
-                            Text("Player 1 scored $player1Score")
+                            Text(stringResource(R.string.player_score, 1, player1Score))
                             player2Score?.let {
-                                Text("Player 2 scored $it")
-                                if (player1Score == it) Text("Draw")
-                                else if (player1Score > it) Text("Player 1 won with $player1Score points")
-                                else Text("Player 2 won with $it points")
+                                Text(stringResource(R.string.player_score, 2, it))
+                                if (player1Score == it) Text(stringResource(R.string.draw))
+                                else if (player1Score > it) Text(stringResource(R.string.player_won, 1, player1Score))
+                                else Text(stringResource(R.string.player_won, 2, it))
                             }
                         }
                     }
@@ -411,7 +411,7 @@ fun Play(
                         }
                         selectedScore = null
                     }) {
-                        Text("Play Again")
+                        Text(stringResource(R.string.play_again))
                     }
                 },
                 dismissButton = {
@@ -421,7 +421,7 @@ fun Play(
                         }
                         ScreenRouter.navigateTo(Screens.Home)
                     }) {
-                        Text("Go back")
+                        Text(stringResource(R.string.go_back))
                     }
                 }
             )
@@ -436,17 +436,17 @@ fun Play(
         }
         if (goBackDialogVisible) {
             AlertDialog(
-                title = { Text("Are you sure you want to go back?") },
-                text = { Text("If you go back, the progress will be lost") },
+                title = { Text(stringResource(R.string.go_back_question)) },
+                text = { Text(stringResource(R.string.go_back_text)) },
                 onDismissRequest = { goBackDialogVisible = false },
                 confirmButton = {
                     Button(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
-                        Text("Go Back")
+                        Text(stringResource(R.string.go_back))
                     }
                 },
                 dismissButton = {
                     Button(onClick = { goBackDialogVisible = false }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )

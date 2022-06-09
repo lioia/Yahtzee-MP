@@ -21,7 +21,7 @@
     <string name="single_player">Single player</string>
     <string name="local">1 vs 1 Local</string>
     <string name="date">Date</string>
-    <string name="player_score">Player %1$d</string>
+    <string name="player_index">Player %1$d</string>
     <string name="roll">Roll</string>
     <string name="save_score">Save Score</string>
     <string name="type">Type</string>
@@ -53,4 +53,14 @@
     <string name="tutorial_bonus">Bonus: it is obtained when the sum of the scores for the 6 previous combinations exceeds or reaches 63. The score is 35 points</string>
     <string name="sound_effect">Sound Effect</string>
     <string name="skip">Skip</string>
+    <string name="game_finished">Game Finished</string>
+    <string name="draw">Draw</string>
+    <string name="player_score">Player %1$d scored %2$d points</string>
+    <string name="your_score">You scored: $1%d points</string>
+    <string name="player_won">Player $1%d won with $2%d points</string>
+    <string name="play_again">Play Again</string>
+    <string name="go_back">Go back</string>
+    <string name="cancel">Cancel</string>
+    <string name="go_back_question">Are you sure you want to go back?</string>
+    <string name="go_back_text">If you go back, the progress will be lost</string>
 </resources>

@@ -51,14 +51,14 @@ fun PreviousGames() {
                             .padding(8.dp)
                     )
                     Text(
-                        stringResource(R.string.player_score, 1), modifier = Modifier
+                        stringResource(R.string.player_index, 1), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                     Text(
-                        stringResource(R.string.player_score, 2), modifier = Modifier
+                        stringResource(R.string.player_index, 2), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
