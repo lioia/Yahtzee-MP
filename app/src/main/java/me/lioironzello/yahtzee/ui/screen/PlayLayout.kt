@@ -5,11 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.*
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -165,9 +161,9 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
     }
 
     if (settingsModel.diceVelocity == DiceVelocity.Slow) {
-        if (referenceModel != null)
+        if (referenceModel != null) {
             Play(settingsModel, numberOfPlayers, referenceModel, faces)
-        else {
+        } else {
             Column(
                 Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -234,7 +230,6 @@ fun Play(
     val transition = updateTransition(targetState = animate, label = "Cube")
     var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
     var goBackDialogVisible by remember { mutableStateOf(false) }
-    var yahtzeeAnimation by remember { mutableStateOf(false) }
 
     val delay = when (settingsModel.diceVelocity) {
         DiceVelocity.Slow -> 1000
@@ -285,13 +280,6 @@ fun Play(
             currentPlayer,
             currentRoll,
             delay,
-            {
-                yahtzeeAnimation = true
-                CoroutineScope(Dispatchers.Default).launch {
-                    delay(1000)
-                    yahtzeeAnimation = false
-                }
-            },
             selectedScore?.first
         ) { score, value ->
             selectedScore = Pair(score, value)
@@ -329,7 +317,8 @@ fun Play(
                 dices.forEach {
                     if (it.locked) return@forEach
                     val random = Random(System.nanoTime()).nextInt(6, 36)
-                    it.number = random % 6
+//                    it.number = random % 6
+                    it.number = 5
                     if (it.is3D) {
                         it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
                         it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
@@ -383,7 +372,13 @@ fun Play(
                             player2Score?.let {
                                 Text(stringResource(R.string.player_score, 2, it))
                                 if (player1Score == it) Text(stringResource(R.string.draw))
-                                else if (player1Score > it) Text(stringResource(R.string.player_won, 1, player1Score))
+                                else if (player1Score > it) Text(
+                                    stringResource(
+                                        R.string.player_won,
+                                        1,
+                                        player1Score
+                                    )
+                                )
                                 else Text(stringResource(R.string.player_won, 2, it))
                             }
                         }
@@ -424,14 +419,6 @@ fun Play(
                         Text(stringResource(R.string.go_back))
                     }
                 }
-            )
-        }
-        AnimatedVisibility(yahtzeeAnimation, enter = scaleIn(), exit = scaleOut()) {
-            Text(
-                stringResource(R.string.yahtzee),
-                style = MaterialTheme.typography.h1,
-                fontFamily = FontFamily.Cursive,
-                fontWeight = FontWeight.Bold
             )
         }
         if (goBackDialogVisible) {
@@ -535,7 +522,6 @@ fun ScoreBoard(
     currentPlayer: Int,
     currentRoll: Int,
     delay: Int,
-    updateYahtzee: () -> Unit,
     selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
@@ -553,8 +539,7 @@ fun ScoreBoard(
                     currentPlayer,
                     it,
                     currentRoll,
-                    delay,
-                    updateYahtzee,
+                    delay.toLong(),
                     selectedScoreType,
                     selectScore
                 )
@@ -570,8 +555,7 @@ fun ScoreBoard(
                     currentPlayer,
                     it,
                     currentRoll,
-                    delay,
-                    updateYahtzee,
+                    delay.toLong(),
                     selectedScoreType,
                     selectScore
                 )
@@ -679,8 +663,7 @@ fun Score(
     currentPlayer: Int,
     type: ScoreType,
     currentRoll: Int,
-    delay: Int,
-    updateYahtzee: () -> Unit,
+    updateDelay: Long,
     selectedScoreType: ScoreType?,
     selectScore: (ScoreType, Int) -> Unit
 ) {
@@ -724,16 +707,15 @@ fun Score(
                 }
         }
         players.forEachIndexed { index, player ->
-            var score = "0"
+            var score by remember { mutableStateOf("0") }
             val savedScore = player.scores[type]
             var count = 0
             if (savedScore == null) {
                 if (currentRoll > 0 && currentPlayer == index) {
                     CoroutineScope(Dispatchers.Default).launch {
-                        delay(delay.toLong())
+                        delay(updateDelay)
                         count = calculateScore(dices, type, players[currentPlayer].doubleYahtzee)
                         score = count.toString()
-                        if (count == 50) updateYahtzee()
                     }
                 }
             } else score = savedScore.toString()

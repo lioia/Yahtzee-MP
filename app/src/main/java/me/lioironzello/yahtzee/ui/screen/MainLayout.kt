@@ -34,7 +34,7 @@ fun MainLayout(settingsModel: SettingsModel) {
 }
 
 @Composable
-fun Home(setNumberOfPlayers: (players: Int) -> Unit) {
+fun Home(setPlaySettings: (players: Int) -> Unit) {
     var playDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -77,14 +77,14 @@ fun Home(setNumberOfPlayers: (players: Int) -> Unit) {
                 text = {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         Button(onClick = {
-                            setNumberOfPlayers(1)
+                            setPlaySettings(1)
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
                             Text(stringResource(R.string.single_player))
                         }
                         Button(onClick = {
-                            setNumberOfPlayers(2)
+                            setPlaySettings(2)
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
