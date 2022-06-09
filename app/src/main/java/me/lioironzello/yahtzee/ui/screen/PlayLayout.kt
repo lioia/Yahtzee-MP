@@ -317,8 +317,7 @@ fun Play(
                 dices.forEach {
                     if (it.locked) return@forEach
                     val random = Random(System.nanoTime()).nextInt(6, 36)
-//                    it.number = random % 6
-                    it.number = 5
+                    it.number = random % 6
                     if (it.is3D) {
                         it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
                         it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
