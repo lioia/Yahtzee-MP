@@ -319,8 +319,8 @@ fun Play(
                     val random = Random(System.nanoTime()).nextInt(6, 36)
                     it.number = random % 6
                     if (it.is3D) {
-                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(1, 5) * 4
-                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(1, 5) * 4
+                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(5, 10) * 4
+                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(5, 10) * 4
                     } else {
                         it.randomValue = random
                     }
@@ -716,7 +716,7 @@ fun Score(
                         count = calculateScore(dices, type, players[currentPlayer].doubleYahtzee)
                         score = count.toString()
                     }
-                }
+                } else score = "0"
             } else score = savedScore.toString()
             val color = if (savedScore != null) Color.Gray else MaterialTheme.colors.background
             Column(
