@@ -57,7 +57,7 @@
     <string name="draw">Draw</string>
     <string name="player_score">Player %1$d scored %2$d points</string>
     <string name="your_score">You scored: %1$d points</string>
-    <string name="player_won">Player %1$d won with %2$d points</string>
+    <string name="player_won">\\nPlayer %1$d won!</string>
     <string name="play_again">Play Again</string>
     <string name="go_back">Go back</string>
     <string name="cancel">Cancel</string>

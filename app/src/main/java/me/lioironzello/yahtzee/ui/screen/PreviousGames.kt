@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.database.GameDatabase
+import me.lioironzello.yahtzee.model.Game
 
 @Composable
 fun PreviousGames() {
@@ -25,6 +26,8 @@ fun PreviousGames() {
     val db = GameDatabase.getInstance(context)
     val dao = db.gameDao()
     val games by dao.loadAll().observeAsState(listOf())
+    val singlePlayerGames = games.filter { it.player2Score == null }
+    val multiPlayerGames = games - singlePlayerGames.toSet()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -37,66 +40,128 @@ fun PreviousGames() {
             backgroundColor = MaterialTheme.colors.background,
             elevation = 0.dp
         )
-        LazyColumn(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            item {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                ) {
+        Table(1, singlePlayerGames)
+        Table(2, multiPlayerGames)
+//        LazyColumn(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+//            item {
+//                Row(
+//                    Modifier
+//                        .fillMaxWidth()
+//                ) {
+//                    Text(
+//                        stringResource(R.string.date), modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(64.dp)
+//                            .border(2.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                    Text(
+//                        stringResource(R.string.player_index, 1), modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(64.dp)
+//                            .border(2.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                    Text(
+//                        stringResource(R.string.player_index, 2), modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(64.dp)
+//                            .border(2.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                }
+//            }
+//            items(games.size) { index ->
+//                val game = games[index]
+//                val player2Score =
+//                    if (game.player2Score == null) "-" else game.player2Score.toString()
+//                Row(
+//                    Modifier
+//                        .fillMaxWidth()
+//                ) {
+//                    Text(
+//                        game.date, modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(60.dp)
+//                            .border(1.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                    Text(
+//                        game.player1Score.toString(), modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(60.dp)
+//                            .border(1.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                    Text(
+//                        player2Score, modifier = Modifier
+//                            .weight(1f, true)
+//                            .height(60.dp)
+//                            .border(1.dp, MaterialTheme.colors.onBackground)
+//                            .padding(8.dp)
+//                    )
+//                }
+//            }
+//        }
+        BackHandler { ScreenRouter.navigateTo(Screens.Home) }
+    }
+}
+
+@Composable
+fun Table(numberOfPlayers: Int, games: List<Game>) {
+    LazyColumn(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        item {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    stringResource(R.string.date), modifier = Modifier
+                        .weight(1f, true)
+                        .height(64.dp)
+                        .border(2.dp, MaterialTheme.colors.onBackground)
+                        .padding(8.dp)
+                )
+                for (i in 1..numberOfPlayers) {
                     Text(
-                        stringResource(R.string.date), modifier = Modifier
+                        stringResource(R.string.player_index, i), modifier = Modifier
                             .weight(1f, true)
                             .height(64.dp)
                             .border(2.dp, MaterialTheme.colors.onBackground)
-                            .padding(8.dp)
-                    )
-                    Text(
-                        stringResource(R.string.player_index, 1), modifier = Modifier
-                            .weight(1f, true)
-                            .height(64.dp)
-                            .border(2.dp, MaterialTheme.colors.onBackground)
-                            .padding(8.dp)
-                    )
-                    Text(
-                        stringResource(R.string.player_index, 2), modifier = Modifier
-                            .weight(1f, true)
-                            .height(64.dp)
-                            .border(2.dp, MaterialTheme.colors.onBackground)
-                            .padding(8.dp)
-                    )
-                }
-            }
-            items(games.size) { index ->
-                val game = games[index]
-                val player2Score = if(game.player2Score == null) "-" else game.player2Score.toString()
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        game.date, modifier = Modifier
-                            .weight(1f, true)
-                            .height(52.dp)
-                            .border(1.dp, MaterialTheme.colors.onBackground)
-                            .padding(8.dp)
-                    )
-                    Text(
-                        game.player1Score.toString(), modifier = Modifier
-                            .weight(1f, true)
-                            .height(52.dp)
-                            .border(1.dp, MaterialTheme.colors.onBackground)
-                            .padding(8.dp)
-                    )
-                    Text(
-                        player2Score, modifier = Modifier
-                            .weight(1f, true)
-                            .height(52.dp)
-                            .border(1.dp, MaterialTheme.colors.onBackground)
                             .padding(8.dp)
                     )
                 }
             }
         }
-        BackHandler { ScreenRouter.navigateTo(Screens.Home) }
+        items(games.size) { index ->
+            val game = games[index]
+            Row(
+                Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    game.date, modifier = Modifier
+                        .weight(1f, true)
+                        .height(60.dp)
+                        .border(1.dp, MaterialTheme.colors.onBackground)
+                        .padding(8.dp)
+                )
+                Text(
+                    game.player1Score.toString(), modifier = Modifier
+                        .weight(1f, true)
+                        .height(60.dp)
+                        .border(1.dp, MaterialTheme.colors.onBackground)
+                        .padding(8.dp)
+                )
+                if (game.player2Score != null)
+                    Text(
+                        game.player2Score.toString(), modifier = Modifier
+                            .weight(1f, true)
+                            .height(60.dp)
+                            .border(1.dp, MaterialTheme.colors.onBackground)
+                            .padding(8.dp)
+                    )
+            }
+        }
     }
 }

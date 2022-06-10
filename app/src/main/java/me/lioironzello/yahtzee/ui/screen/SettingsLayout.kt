@@ -23,6 +23,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.google.accompanist.pager.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.model.DiceColor
 import me.lioironzello.yahtzee.model.DiceVelocity
@@ -39,9 +42,8 @@ fun SettingsLayout(settingsModel: SettingsModel) {
 
     var soundEnabled by remember { mutableStateOf(settingsModel.soundEnabled) }
     var darkTheme by remember { mutableStateOf(settingsModel.darkTheme) }
-    var dice by remember { mutableStateOf(settingsModel.diceColor) }
     var diceVelocity by remember { mutableStateOf(settingsModel.diceVelocity) }
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(settingsModel.diceColor.ordinal)
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -110,15 +112,11 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                             )
                         }
                 ) {
-                    val diceColor = DiceColor.values()[page]
-                    val borderColor =
-                        if (diceColor == dice) Color(255, 244, 56) else Color.Black
                     Box(
                         modifier = Modifier
-                            .border(BorderStroke(6.dp, borderColor))
+                            .border(BorderStroke(6.dp, Color.Gray))
                             .size(80.dp)
-                            .background(diceColor.color)
-                            .clickable { dice = diceColor }
+                            .background(DiceColor.values()[page].color)
                     )
                 }
             }
@@ -172,7 +170,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                 .height(48.dp),
             onClick = {
                 settingsModel.darkTheme = darkTheme
-                settingsModel.diceColor = dice
+                settingsModel.diceColor = DiceColor.values()[pagerState.currentPage]
                 settingsModel.diceVelocity = diceVelocity
                 settingsModel.soundEnabled = soundEnabled
                 val sharedPreferences =

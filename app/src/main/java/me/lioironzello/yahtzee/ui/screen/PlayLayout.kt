@@ -319,10 +319,18 @@ fun Play(
                     val random = Random(System.nanoTime()).nextInt(6, 36)
                     it.number = random % 6
                     if (it.is3D) {
-                        it.kx = DiceModel.Values3D[it.number].first + Random.nextInt(5, 10) * 4
-                        it.ky = DiceModel.Values3D[it.number].second + Random.nextInt(5, 10) * 4
+                        it.kx =
+                            DiceModel.Values3D[it.number].first + Random(System.nanoTime()).nextInt(
+                                1,
+                                10
+                            ) * 4
+                        it.ky =
+                            DiceModel.Values3D[it.number].second + Random(System.nanoTime()).nextInt(
+                                1,
+                                10
+                            ) * 4
                     } else {
-                        it.randomValue = random
+                        it.randomValue = random + Random(System.nanoTime()).nextInt(1, 10) * 6
                     }
                     animate = true
                 }
@@ -527,10 +535,8 @@ fun ScoreBoard(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(8.dp)
-    ) {
+            .padding(4.dp)) {
         Column(Modifier.weight(1f, true)) {
-            ScoreHeader(players.size - 1)
             ScoreType.values().take(6).forEach {
                 Score(
                     dices,
@@ -546,7 +552,6 @@ fun ScoreBoard(
             BonusScore(players, currentPlayer)
         }
         Column(Modifier.weight(1f, true)) {
-            ScoreHeader(players.size - 1)
             ScoreType.values().takeLast(7).forEach {
                 Score(
                     dices,
@@ -564,38 +569,10 @@ fun ScoreBoard(
 }
 
 @Composable
-fun ScoreHeader(numberOfPlayers: Int) {
-    Row(
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            stringResource(R.string.type), modifier = Modifier
-                .padding(4.dp)
-                .weight(2f, true),
-            textAlign = TextAlign.Center
-        )
-        for (i in 0..numberOfPlayers) {
-            Column(
-                modifier = Modifier
-                    .padding(6.dp)
-                    .weight(1f, true),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("#${i + 1}")
-            }
-        }
-    }
-}
-
-@Composable
 fun BonusScore(players: List<Player>, currentPlayer: Int) {
     Row(
         Modifier
-            .height(56.dp)
+            .height(60.dp)
             .border(2.dp, MaterialTheme.colors.onBackground)
             .padding(4.dp)
             .fillMaxWidth(),
@@ -620,7 +597,7 @@ fun BonusScore(players: List<Player>, currentPlayer: Int) {
                 }) {
             Text(
                 stringResource(R.string.bonus), modifier = Modifier
-                    .padding(4.dp),
+                    .padding(4.dp).align(Alignment.Center),
                 textAlign = TextAlign.Center
             )
             if (tooltipVisible)
@@ -675,9 +652,9 @@ fun Score(
 
     Row(
         Modifier
-            .height(56.dp)
+            .height(60.dp)
             .border(2.dp, MaterialTheme.colors.onBackground)
-            .padding(4.dp)
+            .padding(2.dp)
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -693,7 +670,7 @@ fun Score(
                 }) {
             Text(
                 stringResource(type.text), modifier = Modifier
-                    .padding(4.dp),
+                    .padding(4.dp).align(Alignment.Center),
                 textAlign = TextAlign.Center
             )
             if (tooltipVisible)
@@ -706,18 +683,16 @@ fun Score(
                 }
         }
         players.forEachIndexed { index, player ->
-            var score by remember { mutableStateOf("0") }
             val savedScore = player.scores[type]
-            var count = 0
+            var count by remember { mutableStateOf(0) }
             if (savedScore == null) {
                 if (currentRoll > 0 && currentPlayer == index) {
                     CoroutineScope(Dispatchers.Default).launch {
                         delay(updateDelay)
                         count = calculateScore(dices, type, players[currentPlayer].doubleYahtzee)
-                        score = count.toString()
                     }
-                } else score = "0"
-            } else score = savedScore.toString()
+                } else count = 0
+            } else count = savedScore
             val color = if (savedScore != null) Color.Gray else MaterialTheme.colors.background
             Column(
                 modifier = Modifier
@@ -736,7 +711,7 @@ fun Score(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(score)
+                Text(count.toString())
             }
         }
     }

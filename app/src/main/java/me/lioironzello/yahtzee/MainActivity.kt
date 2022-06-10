@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,17 +41,16 @@ class MainActivity : ComponentActivity() {
                 (configurationInfo.reqGlEsVersion and 0xffff0000.toInt()) shr 16
             } else 1
 
-        val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        // Getting settings from SharedPreferences
-        val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
-        var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
-        val soundEnabled = sharedPreferences.getBoolean("soundEnabled", true)
-        if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
-
         super.onCreate(savedInstanceState)
         setContent {
+            val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
+            // Getting settings from SharedPreferences
+            val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
+            var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
+            val soundEnabled = sharedPreferences.getBoolean("soundEnabled", true)
+            if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
-            val settings = rememberSaveable { SettingsModel() }
+            val settings by remember {  mutableStateOf(SettingsModel()) }
             settings.darkTheme = darkTheme
             settings.diceColor = diceColor
             settings.diceVelocity = diceVelocity
