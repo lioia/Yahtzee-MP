@@ -38,8 +38,8 @@ import kotlin.math.absoluteValue
 fun SettingsLayout(settingsModel: SettingsModel) {
     val context = LocalContext.current
 
+    // State of this layout with default value saved in the SharedPreferences (loaded in the MainActivity)
     var velocityExpanded by remember { mutableStateOf(false) }
-
     var soundEnabled by remember { mutableStateOf(settingsModel.soundEnabled) }
     var darkTheme by remember { mutableStateOf(settingsModel.darkTheme) }
     var diceVelocity by remember { mutableStateOf(settingsModel.diceVelocity) }
@@ -81,6 +81,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             }
             // Dice Color
             Text(stringResource(R.string.dice_color), style = MaterialTheme.typography.body1)
+            // Code from https://google.github.io/accompanist/pager/#item-scroll-effects
             HorizontalPager(
                 count = DiceColor.values().size,
                 modifier = Modifier.padding(8.dp),
@@ -134,6 +135,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                 ExposedDropdownMenuBox(
                     expanded = velocityExpanded,
                     onExpandedChange = { velocityExpanded = !velocityExpanded }) {
+                    // Read-only text field used to display the selected dice velocity
                     OutlinedTextField(
                         modifier = Modifier.width(192.dp),
                         value = stringResource(diceVelocity.text),
@@ -144,6 +146,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                     ExposedDropdownMenu(
                         expanded = velocityExpanded,
                         onDismissRequest = { velocityExpanded = false }) {
+                        // if the device supports OpenGL version 3, 3d dice rendering is enabled
                         if (settingsModel.glVersion == 3)
                             DropdownMenuItem(onClick = {
                                 diceVelocity = DiceVelocity.Slow
@@ -169,6 +172,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                 .width(128.dp)
                 .height(48.dp),
             onClick = {
+                // Saving the settings in the SharedPreferences
                 settingsModel.darkTheme = darkTheme
                 settingsModel.diceColor = DiceColor.values()[pagerState.currentPage]
                 settingsModel.diceVelocity = diceVelocity
@@ -185,6 +189,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             }) {
             Text(stringResource(R.string.save), style = MaterialTheme.typography.body1)
         }
+        // Credits
         Column(Modifier.padding(16.dp)) {
             Divider()
             Text(stringResource(R.string.libraries), fontWeight = FontWeight.Bold)
@@ -202,6 +207,7 @@ fun SettingsLayout(settingsModel: SettingsModel) {
     }
 }
 
+// Utility function for code reusability
 @Composable
 fun LibraryRow(name: String, url: String) {
     val uriHandler = LocalUriHandler.current

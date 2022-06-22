@@ -27,7 +27,7 @@ class DiceModel(
     @IgnoredOnParcel
     val faces: List<Bitmap> = listOf(),
 ) : Parcelable {
-
+    // Update the background color and scale the model
     fun setModel(referenceNode: RenderableInstance?, color: Color) {
         referenceNode?.let {
             modelNode.setModel(it.renderable)
@@ -41,10 +41,10 @@ class DiceModel(
     // Random values used for 3D animation
     @IgnoredOnParcel
     var kx = 0
-
     @IgnoredOnParcel
     var ky = 0
 
+    // 3D model
     @IgnoredOnParcel
     private var _modelNode = mutableStateOf(ModelNode())
     var modelNode: ModelNode
@@ -57,6 +57,7 @@ class DiceModel(
     @IgnoredOnParcel
     var randomValue = 1
 
+    // Current value of the dice (0..5)
     @IgnoredOnParcel
     private var _number = mutableStateOf(1)
     var number: Int
@@ -65,6 +66,7 @@ class DiceModel(
             _number.value = value
         }
 
+    // Dice can't be rolled
     @IgnoredOnParcel
     private var _locked = mutableStateOf(false)
     var locked: Boolean
@@ -73,6 +75,7 @@ class DiceModel(
             _locked.value = value
         }
 
+    // Utility object for the 3d faces
     companion object {
         val Values3D = listOf(
             Pair(2, 3), // Face 1

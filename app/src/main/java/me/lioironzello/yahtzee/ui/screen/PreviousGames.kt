@@ -17,15 +17,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.database.GameDatabase
+import me.lioironzello.yahtzee.database.GameRepository
 import me.lioironzello.yahtzee.model.Game
 
 @Composable
 fun PreviousGames() {
     val context = LocalContext.current
 
+    // Loading the database
     val db = GameDatabase.getInstance(context)
     val dao = db.gameDao()
-    val games by dao.loadAll().observeAsState(listOf())
+    val repository = GameRepository(dao)
+
+    // Getting all the saved games in the database
+    val games by repository.allGames.observeAsState(listOf())
+    // Filtering the games
     val singlePlayerGames = games.filter { it.player2Score == null }
     val multiPlayerGames = games - singlePlayerGames.toSet()
 
@@ -42,74 +48,16 @@ fun PreviousGames() {
         )
         Table(1, singlePlayerGames)
         Table(2, multiPlayerGames)
-//        LazyColumn(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-//            item {
-//                Row(
-//                    Modifier
-//                        .fillMaxWidth()
-//                ) {
-//                    Text(
-//                        stringResource(R.string.date), modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(64.dp)
-//                            .border(2.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                    Text(
-//                        stringResource(R.string.player_index, 1), modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(64.dp)
-//                            .border(2.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                    Text(
-//                        stringResource(R.string.player_index, 2), modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(64.dp)
-//                            .border(2.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                }
-//            }
-//            items(games.size) { index ->
-//                val game = games[index]
-//                val player2Score =
-//                    if (game.player2Score == null) "-" else game.player2Score.toString()
-//                Row(
-//                    Modifier
-//                        .fillMaxWidth()
-//                ) {
-//                    Text(
-//                        game.date, modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(60.dp)
-//                            .border(1.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                    Text(
-//                        game.player1Score.toString(), modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(60.dp)
-//                            .border(1.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                    Text(
-//                        player2Score, modifier = Modifier
-//                            .weight(1f, true)
-//                            .height(60.dp)
-//                            .border(1.dp, MaterialTheme.colors.onBackground)
-//                            .padding(8.dp)
-//                    )
-//                }
-//            }
-//        }
         BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }
 
+// Utility function for code reusability
 @Composable
 fun Table(numberOfPlayers: Int, games: List<Game>) {
+    // Using LazyColumn for efficiency
     LazyColumn(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Table header
         item {
             Row(
                 Modifier
@@ -133,6 +81,7 @@ fun Table(numberOfPlayers: Int, games: List<Game>) {
                 }
             }
         }
+        // Displaying the games
         items(games.size) { index ->
             val game = games[index]
             Row(

@@ -17,11 +17,13 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.model.SettingsModel
 
+// Main Router
 @ExperimentalAnimationApi
 @ExperimentalPagerApi
 @ExperimentalMaterialApi
 @Composable
 fun MainLayout(settingsModel: SettingsModel) {
+    // Variable set in Home that needs to be passed to PlayLayout
     var numberOfPlayers by remember { mutableStateOf(1) }
 
     when (ScreenRouter.currentScreen) {
@@ -33,6 +35,7 @@ fun MainLayout(settingsModel: SettingsModel) {
     }
 }
 
+// Home Screen
 @Composable
 fun Home(setPlaySettings: (players: Int) -> Unit) {
     var playDialog by remember { mutableStateOf(false) }
@@ -71,20 +74,21 @@ fun Home(setPlaySettings: (players: Int) -> Unit) {
             Text(stringResource(R.string.previous_games), style = MaterialTheme.typography.button)
         }
 
+        // Dialog to select the number of players
         if (playDialog) {
             AlertDialog(onDismissRequest = { playDialog = false },
                 title = { Text(stringResource(R.string.select_num_players)) },
                 text = {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         Button(onClick = {
-                            setPlaySettings(1)
+                            setPlaySettings(1) // Updating the variable in the router
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
                             Text(stringResource(R.string.single_player))
                         }
                         Button(onClick = {
-                            setPlaySettings(2)
+                            setPlaySettings(2) // Updating the variable in the router
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {

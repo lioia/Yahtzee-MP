@@ -31,8 +31,8 @@ import java.util.*
 @ExperimentalMaterialApi
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Getting OpenGL ES Version
-        // From https://android.googlesource.com/platform/cts/+/73e3f96/tests/tests/graphics/src/android/opengl/cts/OpenGlEsVersionTest.java
+        // Getting OpenGL ES Version (used for 3d rendering the dice model)
+        // From https://android.googlesource.com/platform/cts/+/73e3f96/tests/tests/graphics/src/android/opengl/cts/OpenGlEsVersionTest.java#151
         val activityManager =
             applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
@@ -43,13 +43,14 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         setContent {
-            val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
             // Getting settings from SharedPreferences
+            val sharedPreferences = getSharedPreferences("settings", Context.MODE_PRIVATE)
             val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
             var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
             val soundEnabled = sharedPreferences.getBoolean("soundEnabled", true)
             if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
+            // Creating the SettingsModel
             val settings by remember {  mutableStateOf(SettingsModel()) }
             settings.darkTheme = darkTheme
             settings.diceColor = diceColor

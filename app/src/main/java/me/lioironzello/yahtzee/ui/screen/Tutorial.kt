@@ -30,9 +30,17 @@ import com.google.accompanist.pager.rememberPagerState
 import kotlinx.coroutines.launch
 import me.lioironzello.yahtzee.R
 
+// Utility class for code reusability
 data class PageInfo(val video: Int?, val text: List<Int>)
 
-object Tutorial {
+@ExperimentalAnimationApi
+@ExperimentalPagerApi
+@Composable
+fun Tutorial() {
+    val pagerState = rememberPagerState() // State to control the current page in the Pager
+    val scope = rememberCoroutineScope()
+
+    // List of PageInfo
     val pages = listOf(
         PageInfo(null, listOf(R.string.tutorial_one)),
         PageInfo(R.drawable.clip1, listOf(R.string.tutorial_two)),
@@ -55,14 +63,6 @@ object Tutorial {
             )
         )
     )
-}
-
-@ExperimentalAnimationApi
-@ExperimentalPagerApi
-@Composable
-fun Tutorial() {
-    val pagerState = rememberPagerState()
-    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -76,11 +76,11 @@ fun Tutorial() {
             elevation = 0.dp
         )
         HorizontalPager(
-            Tutorial.pages.size,
+            pages.size,
             state = pagerState,
             modifier = Modifier.weight(1f, true)
         ) { page ->
-            Page(pageInfo = Tutorial.pages[page])
+            Page(pageInfo = pages[page])
         }
         HorizontalPagerIndicator(
             pagerState = pagerState,
@@ -93,7 +93,7 @@ fun Tutorial() {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            if (pagerState.currentPage == 0) {
+            if (pagerState.currentPage == 0) { // Don't show the button if we're on the first page
                 Spacer(Modifier.weight(1f, true))
             } else {
                 AnimatedVisibility(
@@ -112,21 +112,22 @@ fun Tutorial() {
                 }
             }
             Button(onClick = {
-                if (pagerState.currentPage == pagerState.pageCount - 1) {
+                if (pagerState.currentPage == pagerState.pageCount - 1) { // Go to home if we're on the last page
                     ScreenRouter.navigateTo(Screens.Home)
-                } else {
+                } else { // Scroll to the last page of the tutorial
                     scope.launch {
                         pagerState.animateScrollToPage(pagerState.pageCount - 1)
                     }
                 }
             }, modifier = Modifier.weight(1f, true)) {
+                // Text is chosen dynamically based on the current page
                 Text(
                     if (pagerState.currentPage == pagerState.pageCount - 1)
                         stringResource(R.string.close)
                     else stringResource(R.string.skip)
                 )
             }
-            if (pagerState.currentPage == pagerState.pageCount - 1) {
+            if (pagerState.currentPage == pagerState.pageCount - 1) { // Don't show the button if we're on the last page
                 Spacer(Modifier.weight(1f, true))
             } else {
                 AnimatedVisibility(
@@ -149,6 +150,7 @@ fun Tutorial() {
     }
 }
 
+// Utility function for code reusability
 @Composable
 private fun Page(pageInfo: PageInfo) {
     val context = LocalContext.current
