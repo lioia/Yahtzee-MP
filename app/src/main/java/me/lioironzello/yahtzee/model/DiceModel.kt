@@ -28,19 +28,25 @@ class DiceModel(
     val faces: List<Bitmap> = listOf(),
 ) : Parcelable {
     // Update the background color and scale the model
-    fun setModel(referenceNode: RenderableInstance?, color: Color) {
+    fun init(referenceNode: RenderableInstance?, color: Color, number: Int) {
+        randomValue = number
+        kx = Values3D[number].first
+        ky = Values3D[number].second
         referenceNode?.let {
             modelNode.setModel(it.renderable)
             modelNode.scaleModel(1.75f)
             modelNode.modelInstance?.getMaterial("background")?.filamentMaterialInstance?.setBaseColor(
                 colorOf(color.toArgb())
             )
+            modelNode.modelRotation.x = kx * 90f
+            modelNode.modelRotation.y = ky * 90f
         }
     }
 
     // Random values used for 3D animation
     @IgnoredOnParcel
     var kx = 0
+
     @IgnoredOnParcel
     var ky = 0
 

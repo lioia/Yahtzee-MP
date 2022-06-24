@@ -79,4 +79,6 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.1.0")
 
     implementation "com.github.skgmn:composetooltip:0.2.0"
+
+    implementation 'com.google.code.gson:gson:2.9.0'
 }

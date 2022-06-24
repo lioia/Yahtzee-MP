@@ -1,5 +1,6 @@
 package me.lioironzello.yahtzee.ui.screen
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.media.MediaPlayer
@@ -33,11 +34,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import com.github.skgmn.composetooltip.AnchorEdge
 import com.github.skgmn.composetooltip.Tooltip
 import com.github.skgmn.composetooltip.rememberTooltipStyle
 import com.google.ar.sceneform.rendering.RenderableInstance
+import com.google.gson.Gson
 import io.github.sceneview.SceneView
 import io.github.sceneview.material.setBaseColor
 import io.github.sceneview.math.Position
@@ -51,16 +55,16 @@ import kotlinx.coroutines.launch
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.database.GameDatabase
 import me.lioironzello.yahtzee.database.GameRepository
-import me.lioironzello.yahtzee.model.DiceModel
-import me.lioironzello.yahtzee.model.DiceVelocity
-import me.lioironzello.yahtzee.model.Player
-import me.lioironzello.yahtzee.model.SettingsModel
+import me.lioironzello.yahtzee.model.*
+import me.lioironzello.yahtzee.model.DiceModel.Companion.Values3D
+import java.io.File
+import java.nio.charset.Charset
 import kotlin.random.Random
 
 // Function used to load the page
 @ExperimentalAnimationApi
 @Composable
-fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
+fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int, continueGame: Boolean) {
     // 3d model
     var referenceModel by remember { mutableStateOf<RenderableInstance?>(null) }
     // 2d images created at runtime
@@ -165,10 +169,17 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
         }
     }
 
+    val gameState = if (continueGame) {
+        val file = File(context.cacheDir, "state")
+        val json = file.readText()
+        val gson = Gson()
+        gson.fromJson(json, GameState::class.java)
+    } else null
+
     // Loading the Play function with the correct information
     if (settingsModel.diceVelocity == DiceVelocity.Slow) {
         if (referenceModel != null) {
-            Play(settingsModel, numberOfPlayers, referenceModel, faces)
+            Play(settingsModel, numberOfPlayers, referenceModel, faces, gameState)
         } else { // Model is not loaded
             Column(
                 Modifier.fillMaxSize(),
@@ -179,7 +190,7 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
             }
         }
     } else {
-        Play(settingsModel, numberOfPlayers, null, faces)
+        Play(settingsModel, numberOfPlayers, null, faces, gameState)
     }
 }
 
@@ -187,56 +198,74 @@ fun PlayLayout(settingsModel: SettingsModel, numberOfPlayers: Int) {
 @Composable
 fun Play(
     settingsModel: SettingsModel,
-    numberOfPlayers: Int,
+    numPlayers: Int,
     referenceModel: RenderableInstance?,
-    faces: List<Bitmap>
+    faces: List<Bitmap>,
+    gameState: GameState?
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Utility variable used by the Dice class
     val is3D = settingsModel.diceVelocity == DiceVelocity.Slow
+    val diceColor = settingsModel.diceColor.color
     // List of 5 dices
     val dices = remember {
         mutableStateListOf(
             DiceModel(is3D, faces).apply {
-                setModel(
+                init(
                     referenceModel,
-                    settingsModel.diceColor.color
+                    diceColor,
+                    gameState?.dices?.get(0) ?: 1
                 )
             },
             DiceModel(is3D, faces).apply {
-                setModel(
+                init(
                     referenceModel,
-                    settingsModel.diceColor.color
+                    diceColor,
+                    gameState?.dices?.get(1) ?: 1
                 )
             },
             DiceModel(is3D, faces).apply {
-                setModel(
+                init(
                     referenceModel,
-                    settingsModel.diceColor.color
+                    diceColor,
+                    gameState?.dices?.get(2) ?: 1
                 )
             },
             DiceModel(is3D, faces).apply {
-                setModel(
+                init(
                     referenceModel,
-                    settingsModel.diceColor.color
+                    diceColor,
+                    gameState?.dices?.get(3) ?: 1
                 )
             },
-            DiceModel(is3D, faces).apply { setModel(referenceModel, settingsModel.diceColor.color) }
+            DiceModel(is3D, faces).apply {
+                init(
+                    referenceModel,
+                    diceColor,
+                    gameState?.dices?.get(4) ?: 1
+                )
+            },
         )
     }
 
+    val numberOfPlayers = gameState?.players?.size ?: numPlayers
+    val player1 = gameState?.players?.get(0) ?: Player()
+    var player2 = Player()
+    if (gameState != null && numberOfPlayers > 1)
+        player2 = gameState.players[1]
+
     // Variables for the controlling the game
-    var currentRound by remember { mutableStateOf(0) }
-    var currentRoll by remember { mutableStateOf(0) }
-    var currentPlayer by remember { mutableStateOf(0) }
+    var currentRound by remember { mutableStateOf(gameState?.players?.last()?.scores?.size ?: 0) }
+    var currentRoll by remember { mutableStateOf(gameState?.currentRoll ?: 0) }
+    var currentPlayer by remember { mutableStateOf(if (player1.scores.size == player2.scores.size + 1) 1 else 0) }
     val players = if (numberOfPlayers == 1) {
-        remember { mutableStateListOf(Player()) }
+        remember { mutableStateListOf(player1) }
     } else {
-        remember { mutableStateListOf(Player(), Player()) }
+        remember { mutableStateListOf(player1, player2) }
     }
     var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
-    var goBackDialogVisible by remember { mutableStateOf(false) }
 
     // Used to trigger the dice rolling animation after clicking the Roll button
     var animate by remember { mutableStateOf(false) }
@@ -267,12 +296,16 @@ fun Play(
             contentScale = ContentScale.FillBounds
         )
     }
-    Column(
-        Modifier.fillMaxSize()
-    ) {
+    Column(Modifier.fillMaxSize()) {
         // Header row
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            IconButton(onClick = { goBackDialogVisible = true }) {
+        Row(
+            Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+        ) {
+            IconButton(onClick = {
+                val state = GameState(dices.map { it.number }, currentRoll, players)
+                saveState(context, state)
+                ScreenRouter.navigateTo(Screens.Home)
+            }) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
             }
             Spacer(Modifier.size(16.dp))
@@ -290,20 +323,23 @@ fun Play(
                 )
             }
         }
-        ScoreBoard(
-            dices.map { it.number + 1 },
-            players,
-            currentPlayer,
-            currentRoll,
-            delay,
-            selectedScore?.first
-        ) { score, value ->
-            selectedScore = Pair(score, value)
+        Column(Modifier.weight(1f, true)) {
+            ScoreBoard(
+                dices.map { it.number + 1 },
+                players,
+                currentPlayer,
+                currentRoll,
+                delay,
+                selectedScore?.first
+            ) { score, value ->
+                selectedScore = Pair(score, value)
+            }
         }
         // Dices
         Row(
             Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             dices.forEach {
@@ -324,7 +360,12 @@ fun Play(
         }
         // Buttons
         // Roll Button enabled only if the number of rolls is less than 3 (starting from 0)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
             Button(onClick = {
                 // Play the sound if it's enabled
                 if (settingsModel.soundEnabled) {
@@ -343,15 +384,14 @@ fun Play(
                         // Then it adds a random value multiplied by 4 to have multiple spins
                         // 4 represents a complete spin of the dice
                         it.kx =
-                            DiceModel.Values3D[it.number].first + Random(System.nanoTime()).nextInt(
+                            Values3D[it.number].first + Random(System.nanoTime()).nextInt(
                                 1,
                                 10
                             ) * 4
-                        it.ky =
-                            DiceModel.Values3D[it.number].second + Random(System.nanoTime()).nextInt(
-                                1,
-                                10
-                            ) * 4
+                        it.ky = Values3D[it.number].second + Random(System.nanoTime()).nextInt(
+                            1,
+                            10
+                        ) * 4
                     } else {
                         // Adding a random value multiplied by 6 to the selected number to have multiple spins
                         // 6 represents a complete spin of the dice
@@ -418,25 +458,40 @@ fun Play(
                 selectedScore = null
             }
 
-        if (goBackDialogVisible) {
-            AlertDialog(
-                title = { Text(stringResource(R.string.go_back_question)) },
-                text = { Text(stringResource(R.string.go_back_text)) },
-                onDismissRequest = { goBackDialogVisible = false },
-                confirmButton = {
-                    Button(onClick = { ScreenRouter.navigateTo(Screens.Home) }) {
-                        Text(stringResource(R.string.go_back))
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = { goBackDialogVisible = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                }
-            )
+        BackHandler {
+            val state = GameState(dices.map { it.number }, currentRoll, players)
+            saveState(context, state)
+            ScreenRouter.navigateTo(Screens.Home)
         }
-        BackHandler { goBackDialogVisible = true }
+        // Side-effect to release sound resources and to listen to lifecycle changes
+        DisposableEffect(lifecycleOwner) {
+            // Observing lifecycle changes
+            val observer = LifecycleEventObserver { _, event ->
+                // Saving game state
+                if (event == Lifecycle.Event.ON_STOP) {
+                    // Creating an object representing the game state
+                    val state = GameState(dices.map { it.number }, currentRoll, players)
+                    saveState(context, state)
+                }
+            }
+
+            lifecycleOwner.lifecycle.addObserver(observer)
+
+            onDispose {
+                mediumSound.release()
+                slowSound.release()
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
     }
+}
+
+fun saveState(context: Context, state: GameState) {
+    val file = File(context.cacheDir, "state")
+    val gson = Gson()
+    val jsonString = gson.toJson(state)
+    // Creating the new state file in the cache directory
+    file.writeText(jsonString, Charset.defaultCharset())
 }
 
 @Composable
@@ -478,7 +533,7 @@ fun Dice(dice: DiceModel, diceVelocity: DiceVelocity, transition: Transition<Boo
                         gestureDetector.scaleGestureDetector = null
                         gestureDetector.cameraManipulator = null
                     }
-                }
+                },
             )
         }
         // Showing the 2d images if the velocity is not slow
@@ -554,6 +609,7 @@ fun GameFinished(players: List<Player>, resetGame: () -> Unit) {
                 repository.saveGame(player1Score, player2Score)
                 // Reset the game board
                 resetGame()
+                File(context.cacheDir, "state").delete()
             }) {
                 Text(stringResource(R.string.play_again))
             }
@@ -564,6 +620,7 @@ fun GameFinished(players: List<Player>, resetGame: () -> Unit) {
                 repository.saveGame(player1Score, player2Score)
                 // Return home
                 ScreenRouter.navigateTo(Screens.Home)
+                File(context.cacheDir, "state").delete()
             }) {
                 Text(stringResource(R.string.go_back))
             }
@@ -589,32 +646,38 @@ fun ScoreBoard(
         Column(Modifier.weight(1f, true)) {
             // Showing the first six score type on the left side (number scores) and the bonus score
             ScoreType.values().take(6).forEach {
-                Score(
-                    dices,
-                    players,
-                    currentPlayer,
-                    it,
-                    currentRoll,
-                    delay.toLong(),
-                    selectedScoreType,
-                    selectScore
-                )
+                Row(Modifier.weight(1f, true)) {
+                    Score(
+                        dices,
+                        players,
+                        currentPlayer,
+                        it,
+                        currentRoll,
+                        delay.toLong(),
+                        selectedScoreType,
+                        selectScore
+                    )
+                }
             }
-            BonusScore(players, currentPlayer)
+            Row(Modifier.weight(1f, true)) {
+                BonusScore(players, currentPlayer)
+            }
         }
         Column(Modifier.weight(1f, true)) {
             // Showing the last 7 on the right side
             ScoreType.values().takeLast(7).forEach {
-                Score(
-                    dices,
-                    players,
-                    currentPlayer,
-                    it,
-                    currentRoll,
-                    delay.toLong(),
-                    selectedScoreType,
-                    selectScore
-                )
+                Row(Modifier.weight(1f, true)) {
+                    Score(
+                        dices,
+                        players,
+                        currentPlayer,
+                        it,
+                        currentRoll,
+                        delay.toLong(),
+                        selectedScoreType,
+                        selectScore
+                    )
+                }
             }
         }
     }
@@ -624,7 +687,6 @@ fun ScoreBoard(
 fun BonusScore(players: List<Player>, currentPlayer: Int) {
     Row(
         Modifier
-            .height(60.dp)
             .border(2.dp, MaterialTheme.colors.onBackground)
             .padding(4.dp)
             .fillMaxWidth(),
@@ -708,7 +770,6 @@ fun Score(
 
     Row(
         Modifier
-            .height(60.dp)
             .border(2.dp, MaterialTheme.colors.onBackground)
             .padding(2.dp)
             .fillMaxWidth(),

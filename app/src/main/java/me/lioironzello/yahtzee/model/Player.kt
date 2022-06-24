@@ -1,17 +1,20 @@
 package me.lioironzello.yahtzee.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import me.lioironzello.yahtzee.ui.screen.ScoreType
 
-class Player {
-    var scores = mutableMapOf<ScoreType, Int>()
-    var bonusReached = false
-    var lastSixScore = 0
-    var doubleYahtzee = false
+@Parcelize
+data class Player(
+    var scores: MutableMap<ScoreType, Int> = mutableMapOf(),
+    var bonusReached: Boolean = false,
+    var lastSixScore: Int = 0,
+    var doubleYahtzee: Boolean = false
+) : Parcelable
 
-    fun calculateBonus() {
-        if (bonusReached) return
-        val lastSix = scores.values.toList().takeLast(6)
-        bonusReached = lastSix.sum() >= 63
-        lastSixScore = lastSix.sum()
-    }
+fun Player.calculateBonus() {
+    if (bonusReached) return
+    val lastSix = scores.values.toList().takeLast(6)
+    bonusReached = lastSix.sum() >= 63
+    lastSixScore = lastSix.sum()
 }

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.pager.ExperimentalPagerApi
 import me.lioironzello.yahtzee.R
 import me.lioironzello.yahtzee.model.SettingsModel
+import java.io.File
 
 // Main Router
 @ExperimentalAnimationApi
@@ -25,19 +27,22 @@ import me.lioironzello.yahtzee.model.SettingsModel
 fun MainLayout(settingsModel: SettingsModel) {
     // Variable set in Home that needs to be passed to PlayLayout
     var numberOfPlayers by remember { mutableStateOf(1) }
+    var continueGame by remember { mutableStateOf(false) }
 
     when (ScreenRouter.currentScreen) {
-        Screens.Home -> Home { num -> numberOfPlayers = num }
+        Screens.Home -> Home { num, con -> numberOfPlayers = num; continueGame = con }
         Screens.Settings -> SettingsLayout(settingsModel)
         Screens.PreviousGames -> PreviousGames()
         Screens.Tutorial -> Tutorial()
-        Screens.Play -> PlayLayout(settingsModel, numberOfPlayers)
+        Screens.Play -> PlayLayout(settingsModel, numberOfPlayers, continueGame)
     }
 }
 
 // Home Screen
 @Composable
-fun Home(setPlaySettings: (players: Int) -> Unit) {
+fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
+    val context = LocalContext.current
+
     var playDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -54,14 +59,14 @@ fun Home(setPlaySettings: (players: Int) -> Unit) {
                 Icon(Icons.Outlined.Settings, contentDescription = "Settings")
             }
         }
-        Spacer(modifier = Modifier.height(128.dp))
+        Spacer(modifier = Modifier.weight(3f, true))
         Text(
             stringResource(R.string.yahtzee),
             style = MaterialTheme.typography.h1,
             fontFamily = FontFamily.Cursive,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(128.dp))
+        Spacer(modifier = Modifier.weight(3f, true))
         Button(
             onClick = { playDialog = true }, modifier = Modifier
                 .width(192.dp)
@@ -69,10 +74,18 @@ fun Home(setPlaySettings: (players: Int) -> Unit) {
         ) {
             Text(stringResource(R.string.play), style = MaterialTheme.typography.h5)
         }
-        Spacer(modifier = Modifier.height(48.dp))
+        if (File(context.cacheDir, "state").exists())
+            Button(onClick = {
+                setPlaySettings(1, true)
+                ScreenRouter.navigateTo(Screens.Play)
+            }, modifier = Modifier.padding(16.dp)) {
+                Text("Continue Game")
+            }
+        Spacer(modifier = Modifier.weight(1f, true))
         OutlinedButton(onClick = { ScreenRouter.navigateTo(Screens.PreviousGames) }) {
             Text(stringResource(R.string.previous_games), style = MaterialTheme.typography.button)
         }
+        Spacer(modifier = Modifier.weight(1f, true))
 
         // Dialog to select the number of players
         if (playDialog) {
@@ -81,14 +94,14 @@ fun Home(setPlaySettings: (players: Int) -> Unit) {
                 text = {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         Button(onClick = {
-                            setPlaySettings(1) // Updating the variable in the router
+                            setPlaySettings(1, false) // Updating the variable in the router
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
                             Text(stringResource(R.string.single_player))
                         }
                         Button(onClick = {
-                            setPlaySettings(2) // Updating the variable in the router
+                            setPlaySettings(2, false) // Updating the variable in the router
                             playDialog = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
