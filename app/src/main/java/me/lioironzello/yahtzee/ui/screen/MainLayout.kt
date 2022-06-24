@@ -79,7 +79,7 @@ fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
                 setPlaySettings(1, true)
                 ScreenRouter.navigateTo(Screens.Play)
             }, modifier = Modifier.padding(16.dp)) {
-                Text("Continue Game")
+                Text(stringResource(R.string.continue_game))
             }
         Spacer(modifier = Modifier.weight(1f, true))
         OutlinedButton(onClick = { ScreenRouter.navigateTo(Screens.PreviousGames) }) {

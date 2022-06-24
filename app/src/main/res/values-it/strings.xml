@@ -4,9 +4,7 @@
     <string name="play">Gioca</string>
     <string name="previous_games">Storico Partite</string>
     <string name="settings">Impostazioni</string>
-    <string name="language">Lingua</string>
     <string name="dark_theme">Tema Scuro</string>
-    <string name="text_size">Grandezza Scritte</string>
     <string name="roll_velocity">Velocità Lancio</string>
     <string name="save">Salva</string>
     <string name="dice_color">Colore Dado</string>
@@ -23,7 +21,6 @@
     <string name="player_index">Giocatore %1$d</string>
     <string name="roll">Lancia</string>
     <string name="save_score">Salva</string>
-    <string name="type">Tipo</string>
     <string name="one">Uno</string>
     <string name="two">Due</string>
     <string name="three">Tre</string>
@@ -54,7 +51,5 @@
     <string name="player_won">\nGiocatore %1$d ha vinto!</string>
     <string name="play_again">Gioca di nuovo</string>
     <string name="go_back">Torna indietro</string>
-    <string name="cancel">Annulla</string>
-    <string name="go_back_question">Sei sicuro di voler tornare indietro?</string>
-    <string name="go_back_text">Se torni indietro, i progressi verranno persi</string>
+    <string name="continue_game">Continua il Gioco</string>
 </resources>

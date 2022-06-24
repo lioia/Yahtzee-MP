@@ -4,9 +4,7 @@
     <string name="previous_games">Previous Games</string>
     <string name="settings">Settings</string>
     <string name="yahtzee" translatable="false">Yahtzee</string>
-    <string name="language">Language</string>
     <string name="dark_theme">Dark Theme</string>
-    <string name="text_size">Text Size</string>
     <string name="roll_velocity">Roll Velocity</string>
     <string name="save">Save</string>
     <string name="dice_color">Dice Color</string>
@@ -24,7 +22,6 @@
     <string name="player_index">Player %1$d</string>
     <string name="roll">Roll</string>
     <string name="save_score">Save Score</string>
-    <string name="type">Type</string>
     <string name="one">One</string>
     <string name="two">Two</string>
     <string name="three">Three</string>
@@ -60,7 +57,5 @@
     <string name="player_won">\nPlayer %1$d won!</string>
     <string name="play_again">Play Again</string>
     <string name="go_back">Go back</string>
-    <string name="cancel">Cancel</string>
-    <string name="go_back_question">Are you sure you want to go back?</string>
-    <string name="go_back_text">If you go back, the progress will be lost</string>
+    <string name="continue_game">Continue Game</string>
 </resources>
