@@ -11,6 +11,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,10 +40,10 @@ fun SettingsLayout(settingsModel: SettingsModel) {
     val context = LocalContext.current
 
     // State of this layout with default value saved in the SharedPreferences (loaded in the MainActivity)
-    var velocityExpanded by remember { mutableStateOf(false) }
-    var soundEnabled by remember { mutableStateOf(settingsModel.soundEnabled) }
-    var darkTheme by remember { mutableStateOf(settingsModel.darkTheme) }
-    var diceVelocity by remember { mutableStateOf(settingsModel.diceVelocity) }
+    val velocityExpanded = rememberSaveable { mutableStateOf(false) }
+    val soundEnabled = rememberSaveable { mutableStateOf(settingsModel.soundEnabled) }
+    val darkTheme = rememberSaveable { mutableStateOf(settingsModel.darkTheme) }
+    val diceVelocity = rememberSaveable { mutableStateOf(settingsModel.diceVelocity) }
     val pagerState = rememberPagerState(settingsModel.diceColor.ordinal)
 
     Column(Modifier.fillMaxSize()) {
@@ -64,8 +65,8 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             ) {
                 Text(stringResource(R.string.dark_theme), style = MaterialTheme.typography.body1)
                 Switch(
-                    checked = darkTheme,
-                    onCheckedChange = { darkTheme = it }
+                    checked = darkTheme.value,
+                    onCheckedChange = { darkTheme.value = it }
                 )
             }
             // Sound Enabled
@@ -75,8 +76,8 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             ) {
                 Text(stringResource(R.string.sound_effect), style = MaterialTheme.typography.body1)
                 Switch(
-                    checked = soundEnabled,
-                    onCheckedChange = { soundEnabled = it }
+                    checked = soundEnabled.value,
+                    onCheckedChange = { soundEnabled.value = it }
                 )
             }
             // Dice Color
@@ -133,32 +134,32 @@ fun SettingsLayout(settingsModel: SettingsModel) {
             ) {
                 Text(stringResource(R.string.roll_velocity), style = MaterialTheme.typography.body1)
                 ExposedDropdownMenuBox(
-                    expanded = velocityExpanded,
-                    onExpandedChange = { velocityExpanded = !velocityExpanded }) {
+                    expanded = velocityExpanded.value,
+                    onExpandedChange = { velocityExpanded.value = !velocityExpanded.value }) {
                     // Read-only text field used to display the selected dice velocity
                     OutlinedTextField(
                         modifier = Modifier.width(192.dp),
-                        value = stringResource(diceVelocity.text),
+                        value = stringResource(diceVelocity.value.text),
                         onValueChange = {},
                         readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = velocityExpanded) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = velocityExpanded.value) },
                     )
                     ExposedDropdownMenu(
-                        expanded = velocityExpanded,
-                        onDismissRequest = { velocityExpanded = false }) {
+                        expanded = velocityExpanded.value,
+                        onDismissRequest = { velocityExpanded.value = false }) {
                         // if the device supports OpenGL version 3, 3d dice rendering is enabled
                         if (settingsModel.glVersion == 3)
                             DropdownMenuItem(onClick = {
-                                diceVelocity = DiceVelocity.Slow
-                                velocityExpanded = false
+                                diceVelocity.value = DiceVelocity.Slow
+                                velocityExpanded.value = false
                             }) { Text(stringResource(R.string.slow)) }
                         DropdownMenuItem(onClick = {
-                            diceVelocity = DiceVelocity.Medium
-                            velocityExpanded = false
+                            diceVelocity.value = DiceVelocity.Medium
+                            velocityExpanded.value = false
                         }) { Text(stringResource(R.string.medium)) }
                         DropdownMenuItem(onClick = {
-                            diceVelocity = DiceVelocity.Fast
-                            velocityExpanded = false
+                            diceVelocity.value = DiceVelocity.Fast
+                            velocityExpanded.value = false
                         }) { Text(stringResource(R.string.fast)) }
                     }
                 }
@@ -173,10 +174,10 @@ fun SettingsLayout(settingsModel: SettingsModel) {
                 .height(48.dp),
             onClick = {
                 // Saving the settings in the SharedPreferences
-                settingsModel.darkTheme = darkTheme
+                settingsModel.darkTheme = darkTheme.value
                 settingsModel.diceColor = DiceColor.values()[pagerState.currentPage]
-                settingsModel.diceVelocity = diceVelocity
-                settingsModel.soundEnabled = soundEnabled
+                settingsModel.diceVelocity = diceVelocity.value
+                settingsModel.soundEnabled = soundEnabled.value
                 val sharedPreferences =
                     context.getSharedPreferences("settings", Context.MODE_PRIVATE)
                 val editor = sharedPreferences.edit()

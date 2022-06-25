@@ -51,20 +51,20 @@ class MainActivity : ComponentActivity() {
             if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
             // Creating the SettingsModel
-            val settings by remember {  mutableStateOf(SettingsModel()) }
-            settings.darkTheme = darkTheme
-            settings.diceColor = diceColor
-            settings.diceVelocity = diceVelocity
-            settings.soundEnabled = soundEnabled
-            settings.glVersion = glVersion
+            val settings = rememberSaveable {  mutableStateOf(SettingsModel()) }
+            settings.value.darkTheme = darkTheme
+            settings.value.diceColor = diceColor
+            settings.value.diceVelocity = diceVelocity
+            settings.value.soundEnabled = soundEnabled
+            settings.value.glVersion = glVersion
 
-            YahtzeeTheme(settings.darkTheme) {
+            YahtzeeTheme(settings.value.darkTheme) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    MainLayout(settings)
+                    MainLayout(settings.value)
                 }
             }
         }

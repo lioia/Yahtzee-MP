@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,15 +27,15 @@ import java.io.File
 @Composable
 fun MainLayout(settingsModel: SettingsModel) {
     // Variable set in Home that needs to be passed to PlayLayout
-    var numberOfPlayers by remember { mutableStateOf(1) }
-    var continueGame by remember { mutableStateOf(false) }
+    val numberOfPlayers = rememberSaveable { mutableStateOf(1) }
+    val continueGame = rememberSaveable { mutableStateOf(false) }
 
     when (ScreenRouter.currentScreen) {
-        Screens.Home -> Home { num, con -> numberOfPlayers = num; continueGame = con }
+        Screens.Home -> Home { num, con -> numberOfPlayers.value = num; continueGame.value = con }
         Screens.Settings -> SettingsLayout(settingsModel)
         Screens.PreviousGames -> PreviousGames()
         Screens.Tutorial -> Tutorial()
-        Screens.Play -> PlayLayout(settingsModel, numberOfPlayers, continueGame)
+        Screens.Play -> PlayLayout(settingsModel, numberOfPlayers.value, continueGame.value)
     }
 }
 
@@ -43,7 +44,7 @@ fun MainLayout(settingsModel: SettingsModel) {
 fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
     val context = LocalContext.current
 
-    var playDialog by remember { mutableStateOf(false) }
+    val playDialog = rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
@@ -68,7 +69,7 @@ fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
         )
         Spacer(modifier = Modifier.weight(3f, true))
         Button(
-            onClick = { playDialog = true }, modifier = Modifier
+            onClick = { playDialog.value = true }, modifier = Modifier
                 .width(192.dp)
                 .height(64.dp), elevation = ButtonDefaults.elevation(8.dp)
         ) {
@@ -88,21 +89,21 @@ fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
         Spacer(modifier = Modifier.weight(1f, true))
 
         // Dialog to select the number of players
-        if (playDialog) {
-            AlertDialog(onDismissRequest = { playDialog = false },
+        if (playDialog.value) {
+            AlertDialog(onDismissRequest = { playDialog.value = false },
                 title = { Text(stringResource(R.string.select_num_players)) },
                 text = {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         Button(onClick = {
                             setPlaySettings(1, false) // Updating the variable in the router
-                            playDialog = false
+                            playDialog.value = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
                             Text(stringResource(R.string.single_player))
                         }
                         Button(onClick = {
                             setPlaySettings(2, false) // Updating the variable in the router
-                            playDialog = false
+                            playDialog.value = false
                             ScreenRouter.navigateTo(Screens.Play)
                         }) {
                             Text(stringResource(R.string.local))
@@ -111,7 +112,7 @@ fun Home(setPlaySettings: (players: Int, continueGame: Boolean) -> Unit) {
                 },
                 confirmButton = {},
                 dismissButton = {
-                    Button(onClick = { playDialog = false }) {
+                    Button(onClick = { playDialog.value = false }) {
                         Text(stringResource(R.string.close))
                     }
                 }

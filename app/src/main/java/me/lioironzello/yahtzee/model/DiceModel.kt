@@ -29,6 +29,7 @@ class DiceModel(
 ) : Parcelable {
     // Update the background color and scale the model
     fun init(referenceNode: RenderableInstance?, color: Color, number: Int) {
+        this.number = number
         randomValue = number
         kx = Values3D[number].first
         ky = Values3D[number].second
@@ -40,6 +41,7 @@ class DiceModel(
             )
             modelNode.modelRotation.x = kx * 90f
             modelNode.modelRotation.y = ky * 90f
+            modelNode.modelRotation.z = 90f
         }
     }
 
