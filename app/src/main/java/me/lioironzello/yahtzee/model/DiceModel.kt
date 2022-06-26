@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.material.setBaseColor
+import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import kotlinx.parcelize.IgnoredOnParcel
@@ -39,9 +40,7 @@ class DiceModel(
             modelNode.modelInstance?.getMaterial("background")?.filamentMaterialInstance?.setBaseColor(
                 colorOf(color.toArgb())
             )
-            modelNode.modelRotation.x = kx * 90f
-            modelNode.modelRotation.y = ky * 90f
-            modelNode.modelRotation.z = 90f
+            modelNode.rotation = Rotation(kx * 90f, ky * 90f, 90f)
         }
     }
 

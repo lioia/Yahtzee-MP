@@ -515,14 +515,12 @@ fun Dice(
                     dice.kx * 90,
                     dice.ky * 90
                 ) else IntSize(
-                    dice.modelNode.modelRotation.x.toInt(),
-                    dice.modelNode.modelRotation.y.toInt()
+                    dice.modelNode.rotation.x.toInt(),
+                    dice.modelNode.rotation.y.toInt()
                 )
             }
-            dice.modelNode.modelRotation = Rotation(
-                rotation.width.toFloat(),
-                rotation.height.toFloat(), 90f
-            )
+            dice.modelNode.rotation =
+                Rotation(rotation.width.toFloat(), rotation.height.toFloat(), 90f)
             val bgColor = MaterialTheme.colors.background
 
             // Calling AndroidView to render a non-JetpackCompose layout
