@@ -2,7 +2,9 @@ package me.lioironzello.yahtzee.model
 
 import android.graphics.Bitmap
 import android.os.Parcelable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.google.ar.sceneform.rendering.RenderableInstance
@@ -53,12 +55,12 @@ class DiceModel(
 
     // 3D model
     @IgnoredOnParcel
-    private var _modelNode = mutableStateOf(ModelNode())
-    var modelNode: ModelNode
-        get() = _modelNode.value
-        set(value) {
-            _modelNode.value = value
-        }
+    var modelNode by mutableStateOf(ModelNode())
+//    var modelNode: ModelNode
+//        get() = _modelNode.value
+//        set(value) {
+//            _modelNode.value = value
+//        }
 
     // Random value used for 2D animation
     @IgnoredOnParcel
