@@ -12,19 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.pager.ExperimentalPagerApi
 import me.lioironzello.yahtzee.model.DiceColor
 import me.lioironzello.yahtzee.model.DiceVelocity
 import me.lioironzello.yahtzee.model.SettingsModel
 import me.lioironzello.yahtzee.ui.screen.MainLayout
 import me.lioironzello.yahtzee.ui.theme.YahtzeeTheme
-import java.util.*
 
 @ExperimentalAnimationApi
 @ExperimentalPagerApi
@@ -48,10 +44,11 @@ class MainActivity : ComponentActivity() {
             val diceColor = DiceColor.values()[sharedPreferences.getInt("dice", 0)]
             var diceVelocity = DiceVelocity.values()[sharedPreferences.getInt("diceVelocity", 0)]
             val soundEnabled = sharedPreferences.getBoolean("soundEnabled", true)
-            if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity = DiceVelocity.Medium
+            if (glVersion != 3 && diceVelocity == DiceVelocity.Slow) diceVelocity =
+                DiceVelocity.Medium
             val darkTheme = sharedPreferences.getBoolean("darkTheme", isSystemInDarkTheme())
             // Creating the SettingsModel
-            val settings = rememberSaveable {  mutableStateOf(SettingsModel()) }
+            val settings = rememberSaveable { mutableStateOf(SettingsModel()) }
             settings.value.darkTheme = darkTheme
             settings.value.diceColor = diceColor
             settings.value.diceVelocity = diceVelocity
