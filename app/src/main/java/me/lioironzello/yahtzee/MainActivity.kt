@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import me.lioironzello.yahtzee.model.DiceColor
 import me.lioironzello.yahtzee.model.DiceVelocity
 import me.lioironzello.yahtzee.model.SettingsModel
@@ -55,6 +58,8 @@ class MainActivity : ComponentActivity() {
             settings.value.soundEnabled = soundEnabled
             settings.value.glVersion = glVersion
 
+            val systemUiController = rememberSystemUiController()
+
             YahtzeeTheme(settings.value.darkTheme) {
                 // A surface container using the 'background' color from the theme
                 Surface(
@@ -62,6 +67,13 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     MainLayout(settings.value)
+                }
+
+                SideEffect {
+                    systemUiController.setSystemBarsColor(
+                        color = if(settings.value.darkTheme) Color.Black else Color.White,
+                        darkIcons = !settings.value.darkTheme
+                    )
                 }
             }
         }
