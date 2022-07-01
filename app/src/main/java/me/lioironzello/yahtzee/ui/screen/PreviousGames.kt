@@ -46,8 +46,8 @@ fun PreviousGames() {
             backgroundColor = MaterialTheme.colors.background,
             elevation = 0.dp
         )
-        Table(1, singlePlayerGames)
-        Table(2, multiPlayerGames)
+        Table(1, singlePlayerGames.reversed())
+        Table(2, multiPlayerGames.reversed())
         BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }

@@ -207,74 +207,21 @@ fun Play(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Utility variable used by the Dice class
-    val is3D = settingsModel.diceVelocity == DiceVelocity.Slow
-    // List of 5 dices
-    val dices by rememberSaveable {
+    // Calculate the number of players based on the last game saved
+    var numberOfPlayers = numPlayers
+    if (lastGameState != null) numberOfPlayers = lastGameState.players.size
+    // Model for controlling the game state
+    val gameState by rememberSaveable {
         mutableStateOf(
-            listOf(
-                DiceModel(is3D, lastGameState?.dices?.get(0) ?: 1),
-                DiceModel(is3D, lastGameState?.dices?.get(1) ?: 1),
-                DiceModel(is3D, lastGameState?.dices?.get(2) ?: 1),
-                DiceModel(is3D, lastGameState?.dices?.get(3) ?: 1),
-                DiceModel(is3D, lastGameState?.dices?.get(4) ?: 1)
-            )
+            GameState(
+                numberOfPlayers,
+                settingsModel.diceVelocity == DiceVelocity.Slow,
+            ).apply { restore(lastGameState) }
         )
     }
 
-    // Reload game state from previous saved game
-    val numberOfPlayers = lastGameState?.players?.size ?: numPlayers
-    val player1 = lastGameState?.players?.get(0) ?: Player()
-    var player2 = Player()
-    if (lastGameState != null && numberOfPlayers > 1)
-        player2 = lastGameState.players[1]
-
-    val scores: List<MutableMap<ScoreType, Int>> by rememberSaveable {
-        mutableStateOf(
-            if (numberOfPlayers == 1) listOf(mutableMapOf())
-            else listOf(mutableMapOf(), mutableMapOf())
-        )
-    }
-
-    // Variables for the controlling the game
-    var currentRound by rememberSaveable {
-        mutableStateOf(
-            lastGameState?.players?.last()?.scores?.size ?: 0
-        )
-    }
-    var currentRoll by rememberSaveable { mutableStateOf(lastGameState?.currentRoll ?: 0) }
-    var currentPlayer by rememberSaveable { mutableStateOf(0) }
-
-    val players = if (numberOfPlayers == 1) {
-        remember { mutableStateListOf(player1) }
-    } else {
-        remember { mutableStateListOf(player1, player2) }
-    }
-    var selectedScore by remember { mutableStateOf<Pair<ScoreType, Int>?>(null) }
-
-    // Used to trigger the dice rolling animation after clicking the Roll button
-    var animate by rememberSaveable { mutableStateOf(false) }
-    // Triggered by the "animate" variable used to control the animation
-    val transition = updateTransition(targetState = animate, label = "Cube")
-    // Buttons are disabled when animating
-    var buttonEnabled by rememberSaveable { mutableStateOf(true) }
-
-    if (lastGameState != null) {
-        currentPlayer =
-            if (lastGameState.players.size > 1 && lastGameState.players[0].scores.size == lastGameState.players[1].scores.size + 1) 1
-            else 0
-        scores.forEachIndexed { index, playerScore ->
-            ScoreType.values().forEach {
-                val savedScore = players[index].scores[it]
-                val score = if (currentPlayer == index && currentRoll > 0 && savedScore == null) calculateScore(
-                    dices.map { dice -> dice.number + 1 },
-                    it,
-                    players[index].doubleYahtzee
-                ) else savedScore ?: 0
-                playerScore[it] = score
-            }
-        }
-    }
+    // Triggered by the "gameState.animate" variable used to control the animation
+    val transition = updateTransition(targetState = gameState.animate, label = "Cube")
 
     // Variable used to update the scores after the animation finishes
     val waitTime = when (settingsModel.diceVelocity) {
@@ -306,14 +253,13 @@ fun Play(
             Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
         ) {
             IconButton(onClick = {
-                val state = LastGameState(dices.map { it.number }, currentRoll, players)
-                saveState(context, state)
+                saveState(context, gameState)
                 ScreenRouter.navigateTo(Screens.Home)
             }) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
             }
             Spacer(Modifier.size(16.dp))
-            players.forEachIndexed { index, player ->
+            gameState.players.forEachIndexed { index, player ->
                 Text(
                     stringResource(
                         R.string.player_index,
@@ -323,21 +269,11 @@ fun Play(
                         .weight(1f, true)
                         .align(Alignment.CenterVertically),
                     style = MaterialTheme.typography.h6,
-                    fontWeight = if (currentPlayer == index) FontWeight.Bold else FontWeight.Light
+                    fontWeight = if (gameState.currentPlayer == index) FontWeight.Bold else FontWeight.Light
                 )
             }
         }
-        Column(Modifier.weight(1f, true)) {
-            ScoreBoard(
-                scores,
-                players,
-                currentPlayer,
-                currentRoll,
-                selectedScore?.first
-            ) { score, value ->
-                selectedScore = Pair(score, value)
-            }
-        }
+        Column(Modifier.weight(1f, true)) { ScoreBoard(gameState) }
         // Dices
         Row(
             Modifier
@@ -345,7 +281,7 @@ fun Play(
                 .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            dices.forEach {
+            gameState.dices.forEach {
                 Column {
                     Dice(
                         it,
@@ -356,7 +292,7 @@ fun Play(
                         transition
                     )
                     IconButton(
-                        onClick = { if (currentRoll > 0) it.locked = !it.locked },
+                        onClick = { if (gameState.currentRoll > 0) it.locked = !it.locked },
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Icon(
@@ -382,8 +318,8 @@ fun Play(
                     if (settingsModel.diceVelocity == DiceVelocity.Slow) slowSound.start()
                     else mediumSound.start()
                 }
-                currentRoll++
-                dices.forEach {
+                gameState.currentRoll++
+                gameState.dices.forEach {
                     // Skip the dice if it's locked
                     if (it.locked) return@forEach
                     // Select a random value
@@ -403,100 +339,89 @@ fun Play(
                         // 6 represents a complete spin of the dice
                         it.randomValue = it.number + Random(System.nanoTime()).nextInt(1, 10) * 6
                     }
-                    // Enabling animation
-                    animate = true
-
-                    // Disable button
-                    buttonEnabled = false
-                    CoroutineScope(Dispatchers.Default).launch {
-                        delay(waitTime.toLong())
-                        buttonEnabled = true
-                        players.forEachIndexed { index, player ->
-                            ScoreType.values().forEach { score ->
-                                val savedScore = player.scores[score]
-                                val newScore =
-                                    if (currentRoll > 0 && currentPlayer == index && savedScore == null) {
-                                        calculateScore(
-                                            dices.map { dice -> dice.number + 1 },
-                                            score,
-                                            player.doubleYahtzee
-                                        )
-                                    } else savedScore ?: 0
-                                scores[index][score] = newScore
-                            }
-                        }
-                    }
                 }
-            }, enabled = currentRoll < 3 && buttonEnabled) {
+                // Enabling animation
+                gameState.animate = true
+
+                // Disable button
+                gameState.buttonEnabled = false
+            }, enabled = gameState.currentRoll < 3 && gameState.buttonEnabled) {
                 Text(stringResource(R.string.roll))
             }
             // Save score button (enabled only if selectedScore is null)
             Button(onClick = {
                 // This value is not null (otherwise the button would be disabled)
-                val score = selectedScore!!
+                val score = gameState.selectedScore!!
                 // Enabling the possibility to make another Yahtzee after the first one
                 if (score.first == ScoreType.Yahtzee && score.second == 50)
-                    players[currentPlayer].doubleYahtzee = true
+                    gameState.players[gameState.currentPlayer].doubleYahtzee = true
                 // Disabling double yahtzee after the second yahtzee
                 if (score.first != ScoreType.Yahtzee && score.second == 50)
-                    players[currentPlayer].doubleYahtzee = false
+                    gameState.players[gameState.currentPlayer].doubleYahtzee = false
                 // Save the score in the player map
-                players[currentPlayer].scores[score.first] = score.second
+                gameState.players[gameState.currentPlayer].scores[score.first] = score.second
                 // Calculate bonus with the new saved score
-                players[currentPlayer].calculateBonus()
+                gameState.players[gameState.currentPlayer].calculateBonus()
                 // Current Player is the last player
-                if (currentPlayer == players.size - 1) {
+                if (gameState.currentPlayer == gameState.players.size - 1) {
                     // Switching player
-                    currentPlayer = 0
+                    gameState.currentPlayer = 0
                     // Go to next round
-                    currentRound++
+                    gameState.currentRound++
                 } else {
                     // Go to next player
-                    currentPlayer++
+                    gameState.currentPlayer++
                 }
                 // Resetting variables
-                currentRoll = 0
-                selectedScore = null
-                dices.forEach { it.locked = false }
-
-            }, enabled = selectedScore != null && buttonEnabled) {
+                gameState.currentRoll = 0
+                gameState.selectedScore = null
+                gameState.dices.forEach { it.locked = false }
+            }, enabled = gameState.selectedScore != null && gameState.buttonEnabled) {
                 Text(stringResource(R.string.save_score))
             }
         }
 
-        if (currentRound == 13)
-            GameFinished(players) {
-                // Resetting the variables used to control the game
-                dices.forEach {
-                    it.locked = false
-                    it.rotation = Values3D[1]
-                    it.randomValue = 1
-                    it.number = 1
-                }
-                currentRound = 0
-                currentRoll = 0
-                currentPlayer = 0
-                players.forEach {
-                    it.bonusReached = false
-                    it.lastSixScore = 0
-                    it.scores = mutableMapOf()
-                }
-                selectedScore = null
-            }
+        if (gameState.currentRound == 13)
+            GameFinished(gameState)
+
         BackHandler {
-            val state = LastGameState(dices.map { it.number }, currentRoll, players)
-            saveState(context, state)
+            // Saving the current game state before exiting
+            saveState(context, gameState)
             ScreenRouter.navigateTo(Screens.Home)
         }
+
+        // Side-effect to run a coroutine to calculate the scores
+        LaunchedEffect(gameState.buttonEnabled) {
+            // Wait for animation to finish
+            delay(waitTime.toLong())
+            // Calculate all the scores for all the players (to display in the ScoreBoard)
+            gameState.players.forEachIndexed { index, player ->
+                ScoreType.values().forEach { score ->
+                    // Get the current saved score
+                    val savedScore = player.scores[score]
+                    val newScore =
+                        if (gameState.currentPlayer == index && savedScore == null) { // it needs to be updated
+                            calculateScore(
+                                gameState.dices.map { dice -> dice.number + 1 },
+                                score,
+                                player.doubleYahtzee
+                            )
+                        } else savedScore ?: 0 // otherwise returns the savedScore or 0
+                    gameState.scores[index][score] = newScore
+                }
+            }
+            // Re-enables the button after the animation
+            gameState.buttonEnabled = true
+        }
+
         // Side-effect to release sound resources and to listen to lifecycle changes
         DisposableEffect(lifecycleOwner) {
             // Observing lifecycle changes
             val observer = LifecycleEventObserver { _, event ->
                 // Saving game state
                 if (event == Lifecycle.Event.ON_STOP) {
-                    // Creating an object representing the game state
-                    val state = LastGameState(dices.map { it.number }, currentRoll, players)
-                    saveState(context, state)
+                    // Saving the current game state
+                    saveState(context, gameState)
                 }
             }
 
@@ -511,172 +436,8 @@ fun Play(
     }
 }
 
-fun saveState(context: Context, state: LastGameState) {
-    val file = File(context.cacheDir, "state")
-    val gson = Gson()
-    val jsonString = gson.toJson(state)
-    // Creating the new state file in the cache directory
-    file.writeText(jsonString, Charset.defaultCharset())
-}
-
 @Composable
-fun Dice(
-    dice: DiceModel,
-    color: Color,
-    referenceModel: RenderableInstance?,
-    faces: List<Bitmap>,
-    diceVelocity: DiceVelocity,
-    transition: Transition<Boolean>
-) {
-
-    when (diceVelocity) {
-        // Showing the 3d model if the velocity is slow
-        DiceVelocity.Slow -> {
-            // Creating the 3D model (that can be added to the SceneView)
-            val modelNode by remember {
-                mutableStateOf(
-                    ModelNode().apply {
-                        // Setting the referenceModel
-                        setModel(referenceModel!!.renderable)
-                        scaleModel(1.75f)
-                        modelInstance?.getMaterial("background")?.filamentMaterialInstance?.setBaseColor(
-                            colorOf(color.toArgb())
-                        )
-                        rotation =
-                            Rotation(dice.rotation.first * 90f, dice.rotation.second * 90f, 90f)
-                    }
-                )
-            }
-            // State changed only if the "animate" variable (in Play) is true
-            // The animation is based on changing the rotation of the model
-            val rotation by transition.animateOffset(
-                label = "Cube",
-                transitionSpec = { tween(durationMillis = 1000) }) { state ->
-                if (state) Offset(dice.rotation.first * 90f, dice.rotation.second * 90f)
-                else Offset(modelNode.rotation.x, modelNode.rotation.y)
-            }
-            modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
-            val bgColor = MaterialTheme.colors.background
-
-            // Calling AndroidView to render a non-JetpackCompose layout
-            AndroidView(
-                modifier = Modifier.size(80.dp),
-                factory = { context ->
-                    SceneView(context).apply {
-                        mainLight = null
-                        backgroundColor =
-                            colorOf(bgColor.red, bgColor.green, bgColor.blue)
-                        addChild(modelNode)
-                        // Disabling dice input
-                        gestureDetector.moveGestureDetector = null
-                        gestureDetector.rotateGestureDetector = null
-                        gestureDetector.scaleGestureDetector = null
-                        gestureDetector.cameraManipulator = null
-                    }
-                },
-            )
-        }
-        // Showing the 2d images if the velocity is not slow
-        else -> {
-            // Animating only on medium velocity
-            val value = if (diceVelocity == DiceVelocity.Medium) {
-                // Animation is based on changing the index of the image to show
-                transition.animateInt(
-                    label = "Cube",
-                    transitionSpec = { tween(durationMillis = 500) }) { state ->
-                    if (state) dice.randomValue else dice.number
-                }.value
-            } else {
-                // No animation on fast velocity
-                dice.number
-            }
-
-            Image(
-                faces[value % 6].asImageBitmap(),
-                contentDescription = "Face",
-                modifier = Modifier.size(64.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun GameFinished(players: List<Player>, resetGame: () -> Unit) {
-    val context = LocalContext.current
-
-    // Loading the database
-    val db = GameDatabase.getInstance(context)
-    val dao = db.gameDao()
-    val repository = GameRepository(dao)
-
-    // Calculate the final scores
-    val player1Score =
-        players[0].scores.values.sum() + if (players[0].bonusReached) 35 else 0
-    var player2Score: Int? = null
-    if (players.size == 2) {
-        player2Score =
-            players[1].scores.values.sum() + if (players[1].bonusReached) 35 else 0
-    }
-
-    AlertDialog(onDismissRequest = {},
-        title = { Text(stringResource(R.string.game_finished)) },
-        text = {
-            // Showing different texts based on the number of players
-            if (players.size == 1)
-                Text(stringResource(R.string.your_score, player1Score))
-            else {
-                Column(Modifier.padding(16.dp)) {
-                    Text(stringResource(R.string.player_score, 1, player1Score))
-                    player2Score?.let {
-                        Text(stringResource(R.string.player_score, 2, it))
-                        if (player1Score == it) Text(stringResource(R.string.draw))
-                        else if (player1Score > it) Text(
-                            stringResource(
-                                R.string.player_won,
-                                1,
-                                player1Score
-                            )
-                        )
-                        else Text(stringResource(R.string.player_won, 2, it))
-                    }
-                }
-            }
-        },
-        // Saving the game in the database after clicking the buttons
-        confirmButton = {
-            // Play Again button
-            Button(onClick = {
-                repository.saveGame(player1Score, player2Score)
-                // Reset the game board
-                resetGame()
-                File(context.cacheDir, "state").delete()
-            }) {
-                Text(stringResource(R.string.play_again))
-            }
-        },
-        dismissButton = {
-            // Go Back button
-            Button(onClick = {
-                repository.saveGame(player1Score, player2Score)
-                // Return home
-                ScreenRouter.navigateTo(Screens.Home)
-                File(context.cacheDir, "state").delete()
-            }) {
-                Text(stringResource(R.string.go_back))
-            }
-        }
-    )
-}
-
-@Composable
-fun ScoreBoard(
-    scores: List<Map<ScoreType, Int>>,
-    players: List<Player>,
-    currentPlayer: Int,
-    currentRoll: Int,
-    selectedScoreType: ScoreType?,
-    selectScore: (ScoreType, Int) -> Unit
-) {
+fun ScoreBoard(gameState: GameState) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -686,35 +447,93 @@ fun ScoreBoard(
             // Showing the first six score type on the left side (number scores) and the bonus score
             ScoreType.values().take(6).forEach {
                 Row(Modifier.weight(1f, true)) {
-                    Score(
-                        scores,
-                        players,
-                        currentPlayer,
-                        it,
-                        currentRoll,
-                        selectedScoreType,
-                        selectScore
-                    )
+                    Score(it, gameState)
                 }
             }
             Row(Modifier.weight(1f, true)) {
-                BonusScore(players, currentPlayer)
+                BonusScore(gameState.players, gameState.currentPlayer)
             }
         }
         Column(Modifier.weight(1f, true)) {
             // Showing the last 7 on the right side
             ScoreType.values().takeLast(7).forEach {
                 Row(Modifier.weight(1f, true)) {
-                    Score(
-                        scores,
-                        players,
-                        currentPlayer,
-                        it,
-                        currentRoll,
-                        selectedScoreType,
-                        selectScore
-                    )
+                    Score(it, gameState)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun Score(type: ScoreType, gameState: GameState) {
+    // Variable to show an help dialog
+    var tooltipVisible by remember { mutableStateOf(false) }
+    val tooltipStyle = rememberTooltipStyle().apply {
+        color = MaterialTheme.colors.background
+        tipWidth = 0.dp
+        tipHeight = 0.dp
+    }
+
+    Row(
+        Modifier
+            .border(2.dp, MaterialTheme.colors.onBackground)
+            .padding(2.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .weight(2f, true)
+                .clickable {
+                    tooltipVisible = true
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(3000)
+                        tooltipVisible = false
+                    }
+                }) {
+            Text(
+                stringResource(type.text), modifier = Modifier
+                    .padding(4.dp)
+                    .align(Alignment.Center),
+                textAlign = TextAlign.Center
+            )
+            if (tooltipVisible)
+                Tooltip(
+                    anchorEdge = AnchorEdge.Top,
+                    tooltipStyle = tooltipStyle,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(stringResource(type.helperText), style = MaterialTheme.typography.caption)
+                }
+        }
+        gameState.players.forEachIndexed { index, player ->
+            // Getting the score from the player map
+            val savedScore = player.scores[type]
+            val score = gameState.scores[index][type] ?: 0
+            // Change the background color only if the score was already saved
+            val color = if (savedScore != null) Color.Gray else MaterialTheme.colors.background
+            Column(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .border(
+                        3.dp,
+                        // Apply a border to the selected score
+                        if (gameState.selectedScore?.first == type && index == gameState.currentPlayer) Color.Blue
+                        else MaterialTheme.colors.onBackground
+                    )
+                    .background(color)
+                    .weight(1f, true)
+                    .fillMaxSize()
+                    .clickable {
+                        // Select score only if it's the current player turn and it's after the first roll
+                        if (index == gameState.currentPlayer && savedScore == null && gameState.currentRoll > 0)
+                            gameState.selectedScore = Pair(type, score)
+                    },
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(score.toString())
             }
         }
     }
@@ -787,84 +606,166 @@ fun BonusScore(players: List<Player>, currentPlayer: Int) {
 }
 
 @Composable
-fun Score(
-    scores: List<Map<ScoreType, Int>>,
-    players: List<Player>,
-    currentPlayer: Int,
-    type: ScoreType,
-    currentRoll: Int,
-    selectedScoreType: ScoreType?,
-    selectScore: (ScoreType, Int) -> Unit
+fun Dice(
+    dice: DiceModel,
+    color: Color,
+    referenceModel: RenderableInstance?,
+    faces: List<Bitmap>,
+    diceVelocity: DiceVelocity,
+    transition: Transition<Boolean>
 ) {
-    // Variable to show an help dialog
-    var tooltipVisible by remember { mutableStateOf(false) }
-    val tooltipStyle = rememberTooltipStyle().apply {
-        color = MaterialTheme.colors.background
-        tipWidth = 0.dp
-        tipHeight = 0.dp
+    when (diceVelocity) {
+        // Showing the 3d model if the velocity is slow
+        DiceVelocity.Slow -> {
+            // Creating the 3D model (that can be added to the SceneView)
+            val modelNode by remember {
+                mutableStateOf(
+                    ModelNode().apply {
+                        // Setting the referenceModel
+                        setModel(referenceModel!!.renderable)
+                        scaleModel(1.75f)
+                        modelInstance?.getMaterial("background")?.filamentMaterialInstance?.setBaseColor(
+                            colorOf(color.toArgb())
+                        )
+                        rotation =
+                            Rotation(dice.rotation.first * 90f, dice.rotation.second * 90f, 90f)
+                    }
+                )
+            }
+            // State changed only if the "animate" variable (in Play) is true
+            // The animation is based on changing the rotation of the model
+            val rotation by transition.animateOffset(
+                label = "Cube",
+                transitionSpec = { tween(durationMillis = 1000) }) { state ->
+                if (state) Offset(dice.rotation.first * 90f, dice.rotation.second * 90f)
+                else Offset(modelNode.rotation.x, modelNode.rotation.y)
+            }
+            modelNode.rotation = Rotation(rotation.x, rotation.y, 90f)
+            val bgColor = MaterialTheme.colors.background
+
+            // Calling AndroidView to render a non-JetpackCompose layout
+            AndroidView(
+                modifier = Modifier.size(80.dp),
+                factory = { context ->
+                    SceneView(context).apply {
+                        mainLight = null
+                        backgroundColor =
+                            colorOf(bgColor.red, bgColor.green, bgColor.blue)
+                        addChild(modelNode)
+                        // Disabling dice input
+                        gestureDetector.moveGestureDetector = null
+                        gestureDetector.rotateGestureDetector = null
+                        gestureDetector.scaleGestureDetector = null
+                        gestureDetector.cameraManipulator = null
+                    }
+                },
+            )
+        }
+        // Showing the 2d images if the velocity is not slow
+        else -> {
+            // Animating only on medium velocity
+            val value = if (diceVelocity == DiceVelocity.Medium) {
+                // Animation is based on changing the index of the image to show
+                transition.animateInt(
+                    label = "Cube",
+                    transitionSpec = { tween(durationMillis = 500) }) { state ->
+                    if (state) dice.randomValue else dice.number
+                }.value
+            } else {
+                // No animation on fast velocity
+                dice.number
+            }
+
+            Image(
+                faces[value % 6].asImageBitmap(),
+                contentDescription = "Face",
+                modifier = Modifier.size(64.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun GameFinished(gameState: GameState) {
+    val context = LocalContext.current
+
+    // Loading the database
+    val db = GameDatabase.getInstance(context)
+    val dao = db.gameDao()
+    val repository = GameRepository(dao)
+
+    // Calculate the final scores
+    val player1Score =
+        gameState.players[0].scores.values.sum() + if (gameState.players[0].bonusReached) 35 else 0
+    var player2Score: Int? = null
+    if (gameState.players.size == 2) {
+        player2Score =
+            gameState.players[1].scores.values.sum() + if (gameState.players[1].bonusReached) 35 else 0
     }
 
-    Row(
-        Modifier
-            .border(2.dp, MaterialTheme.colors.onBackground)
-            .padding(2.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier
-                .weight(2f, true)
-                .clickable {
-                    tooltipVisible = true
-                    CoroutineScope(Dispatchers.Default).launch {
-                        delay(3000)
-                        tooltipVisible = false
+    AlertDialog(onDismissRequest = {},
+        title = { Text(stringResource(R.string.game_finished)) },
+        text = {
+            // Showing different texts based on the number of players
+            if (gameState.players.size == 1)
+                Text(stringResource(R.string.your_score, player1Score))
+            else {
+                Column(Modifier.padding(16.dp)) {
+                    Text(stringResource(R.string.player_score, 1, player1Score))
+                    player2Score?.let {
+                        Text(stringResource(R.string.player_score, 2, it))
+                        if (player1Score == it) Text(stringResource(R.string.draw))
+                        else if (player1Score > it) Text(
+                            stringResource(
+                                R.string.player_won,
+                                1,
+                                player1Score
+                            )
+                        )
+                        else Text(stringResource(R.string.player_won, 2, it))
                     }
-                }) {
-            Text(
-                stringResource(type.text), modifier = Modifier
-                    .padding(4.dp)
-                    .align(Alignment.Center),
-                textAlign = TextAlign.Center
-            )
-            if (tooltipVisible)
-                Tooltip(
-                    anchorEdge = AnchorEdge.Top,
-                    tooltipStyle = tooltipStyle,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(stringResource(type.helperText), style = MaterialTheme.typography.caption)
                 }
-        }
-        players.forEachIndexed { index, player ->
-            // Getting the score from the player map
-            val savedScore = player.scores[type]
-            val score = scores[index][type] ?: 0
-            // Change the background color only if the score was already saved
-            val color = if (savedScore != null) Color.Gray else MaterialTheme.colors.background
-            Column(
-                modifier = Modifier
-                    .padding(6.dp)
-                    .border(
-                        3.dp,
-                        // Apply a border to the selected score
-                        if (selectedScoreType == type && index == currentPlayer) Color.Blue else MaterialTheme.colors.onBackground
-                    )
-                    .background(color)
-                    .weight(1f, true)
-                    .fillMaxSize()
-                    .clickable {
-                        // Select score only if it's the current player turn and it's after the first roll
-                        if (index == currentPlayer && savedScore == null && currentRoll > 0)
-                            selectScore(type, score)
-                    },
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(score.toString())
+            }
+        },
+        // Saving the game in the database after clicking the buttons
+        confirmButton = {
+            // Play Again button
+            Button(onClick = {
+                repository.saveGame(player1Score, player2Score)
+                // Reset the game board
+                gameState.dices.forEach {
+                    it.locked = false
+                    it.rotation = Values3D[1]
+                    it.randomValue = 1
+                    it.number = 1
+                }
+                gameState.currentRound = 0
+                gameState.currentRoll = 0
+                gameState.currentPlayer = 0
+                gameState.players.forEach {
+                    it.bonusReached = false
+                    it.lastSixScore = 0
+                    it.scores = mutableMapOf()
+                }
+                gameState.selectedScore = null
+                gameState.scores.forEach { it.clear() }
+                File(context.cacheDir, "state").delete()
+            }) {
+                Text(stringResource(R.string.play_again))
+            }
+        },
+        dismissButton = {
+            // Go Back button
+            Button(onClick = {
+                repository.saveGame(player1Score, player2Score)
+                // Return home
+                ScreenRouter.navigateTo(Screens.Home)
+                File(context.cacheDir, "state").delete()
+            }) {
+                Text(stringResource(R.string.go_back))
             }
         }
-    }
+    )
 }
 
 enum class ScoreType(val text: Int, val helperText: Int) {
@@ -881,6 +782,20 @@ enum class ScoreType(val text: Int, val helperText: Int) {
     LargeStraight(R.string.large_straight, R.string.tutorial_large_straight),
     Yahtzee(R.string.yahtzee, R.string.tutorial_yahtzee),
     Chance(R.string.chance, R.string.tutorial_chance)
+}
+
+// Utility function to save the current game State
+fun saveState(context: Context, gameState: GameState) {
+    val state = LastGameState(
+        gameState.dices.map { it.number },
+        gameState.currentRoll,
+        gameState.players
+    )
+    val file = File(context.cacheDir, "state")
+    val gson = Gson()
+    val jsonString = gson.toJson(state)
+    // Creating the new state file in the cache directory
+    file.writeText(jsonString, Charset.defaultCharset())
 }
 
 // Utility function used to calculate the score

@@ -17,13 +17,28 @@ enum class DiceColor(val color: Color) {
 
 @Parcelize
 class DiceModel(val is3D: Boolean, private val value: Int) : Parcelable {
+    fun updateValues() {
+        rotation = Values3D[number]
+        randomValue = number
+    }
+
     // Selected values for 3D animation
     @IgnoredOnParcel
-    var rotation = Values3D[value]
+    private var _rotation = mutableStateOf(Values3D[value])
+    var rotation: Pair<Int, Int>
+        get() = _rotation.value
+        set(value) {
+            _rotation.value = value
+        }
 
     // Random value used for 2D animation
     @IgnoredOnParcel
-    var randomValue = value
+    private var _randomValue = mutableStateOf(value)
+    var randomValue: Int
+        get() = _randomValue.value
+        set(value) {
+            _randomValue.value = value
+        }
 
     // Current value of the dice (0..5)
     @IgnoredOnParcel
