@@ -394,20 +394,22 @@ fun Play(
         LaunchedEffect(gameState.buttonEnabled) {
             // Wait for animation to finish
             delay(waitTime.toLong())
-            // Calculate all the scores for all the players (to display in the ScoreBoard)
-            gameState.players.forEachIndexed { index, player ->
-                ScoreType.values().forEach { score ->
-                    // Get the current saved score
-                    val savedScore = player.scores[score]
-                    val newScore =
-                        if (gameState.currentPlayer == index && savedScore == null) { // it needs to be updated
-                            calculateScore(
-                                gameState.dices.map { dice -> dice.number + 1 },
-                                score,
-                                player.doubleYahtzee
-                            )
-                        } else savedScore ?: 0 // otherwise returns the savedScore or 0
-                    gameState.scores[index][score] = newScore
+            if(gameState.currentRoll > 0) {
+                // Calculate all the scores for all the players (to display in the ScoreBoard)
+                gameState.players.forEachIndexed { index, player ->
+                    ScoreType.values().forEach { score ->
+                        // Get the current saved score
+                        val savedScore = player.scores[score]
+                        val newScore =
+                            if (gameState.currentPlayer == index && savedScore == null) { // it needs to be updated
+                                calculateScore(
+                                    gameState.dices.map { dice -> dice.number + 1 },
+                                    score,
+                                    player.doubleYahtzee
+                                )
+                            } else savedScore ?: 0 // otherwise returns the savedScore or 0
+                        gameState.scores[index][score] = newScore
+                    }
                 }
             }
             // Re-enables the button after the animation
