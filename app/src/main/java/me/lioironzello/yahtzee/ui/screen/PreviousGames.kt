@@ -46,8 +46,14 @@ fun PreviousGames() {
             backgroundColor = MaterialTheme.colors.background,
             elevation = 0.dp
         )
-        Table(1, singlePlayerGames.reversed())
-        Table(2, multiPlayerGames.reversed())
+        Column(Modifier.weight(1f, true)) {
+            Text(stringResource(R.string.single_player), Modifier.align(Alignment.CenterHorizontally))
+            Table(1, singlePlayerGames.reversed())
+        }
+        Column(Modifier.weight(1f, true)) {
+            Text(stringResource(R.string.local), Modifier.align(Alignment.CenterHorizontally))
+            Table(2, multiPlayerGames.reversed())
+        }
         BackHandler { ScreenRouter.navigateTo(Screens.Home) }
     }
 }
