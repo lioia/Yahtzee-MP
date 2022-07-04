@@ -394,7 +394,7 @@ fun Play(
         LaunchedEffect(gameState.buttonEnabled) {
             // Wait for animation to finish
             delay(waitTime.toLong())
-            if(gameState.currentRoll > 0) {
+            if (gameState.currentRoll > 0) {
                 // Calculate all the scores for all the players (to display in the ScoreBoard)
                 gameState.players.forEachIndexed { index, player ->
                     ScoreType.values().forEach { score ->
@@ -793,11 +793,14 @@ fun saveState(context: Context, gameState: GameState) {
         gameState.currentRoll,
         gameState.players
     )
-    val file = File(context.cacheDir, "state")
     val gson = Gson()
     val jsonString = gson.toJson(state)
-    // Creating the new state file in the cache directory
-    file.writeText(jsonString, Charset.defaultCharset())
+
+    CoroutineScope(Dispatchers.IO).launch {
+        val file = File(context.cacheDir, "state")
+        // Creating the new state file in the cache directory
+        file.writeText(jsonString, Charset.defaultCharset())
+    }
 }
 
 // Utility function used to calculate the score
